@@ -1,0 +1,8 @@
+{
+	"appId": "com.geleteye.omnisphere",
+	"appName": "OmniSphere",
+	"webDir": "dist",
+	"server": {
+		"androidScheme": "https"
+	}
+}

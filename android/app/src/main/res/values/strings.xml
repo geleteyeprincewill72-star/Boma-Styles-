@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">OmniSphere</string>
+    <string name="title_activity_main">OmniSphere</string>
+    <string name="package_name">com.geleteye.omnisphere</string>
+    <string name="custom_url_scheme">com.geleteye.omnisphere</string>
+</resources>

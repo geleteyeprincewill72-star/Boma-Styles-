@@ -1,0 +1,133 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User account information, metadata, and roles.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "username": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "bio": { "type": "string" },
+        "avatar": { "type": "string" },
+        "coverPhoto": { "type": "string" },
+        "website": { "type": "string" },
+        "location": { "type": "string" },
+        "isVerified": { "type": "boolean" },
+        "role": { "type": "string" },
+        "createdAt": { "type": "integer" }
+      },
+      "required": ["uid", "username", "displayName", "email", "role", "createdAt"]
+    },
+    "Chat": {
+      "title": "Chat Conversation",
+      "description": "A private one-to-one or group (Circle) chat room.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "members": { "type": "array" },
+        "lastMessage": { "type": "string" },
+        "lastMessageTime": { "type": "integer" },
+        "lastMessageSender": { "type": "string" },
+        "createdAt": { "type": "integer" }
+      },
+      "required": ["id", "type", "members", "createdAt"]
+    },
+    "Message": {
+      "title": "Chat Message",
+      "description": "A message sent inside a Chat room.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "senderAvatar": { "type": "string" },
+        "text": { "type": "string" },
+        "mediaUrl": { "type": "string" },
+        "mediaType": { "type": "string" },
+        "timestamp": { "type": "integer" },
+        "readBy": { "type": "array" }
+      },
+      "required": ["id", "senderId", "senderName", "text", "timestamp"]
+    },
+    "Notification": {
+      "title": "User Notification",
+      "description": "A push or in-app notification record.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "recipientId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "senderAvatar": { "type": "string" },
+        "type": { "type": "string" },
+        "postId": { "type": "string" },
+        "chatId": { "type": "string" },
+        "messageText": { "type": "string" },
+        "read": { "type": "boolean" },
+        "timestamp": { "type": "integer" }
+      },
+      "required": ["id", "recipientId", "senderId", "senderName", "type", "read", "timestamp"]
+    },
+    "PaymentConfig": {
+      "title": "Payment Configuration",
+      "description": "Dynamic banking billing payment settings for upgrades.",
+      "type": "object",
+      "properties": {
+        "bankName": { "type": "string" },
+        "accountNumber": { "type": "string" },
+        "updatedAt": { "type": "integer" }
+      },
+      "required": ["bankName", "accountNumber"]
+    },
+    "AiMessage": {
+      "title": "AI Assistant Message",
+      "description": "Individual message in user's private AI chat history thread.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "sender": { "type": "string" },
+        "content": { "type": "string" },
+        "timestamp": { "type": "integer" },
+        "thoughtProcess": { "type": "string" },
+        "modeUsed": { "type": "string" },
+        "hasGeneratedMedia": { "type": "boolean" },
+        "mediaType": { "type": "string" },
+        "mediaTitle": { "type": "string" },
+        "mediaUrl": { "type": "string" },
+        "generatedCode": { "type": "string" },
+        "isWebSearchGrounded": { "type": "boolean" }
+      },
+      "required": ["id", "sender", "content", "timestamp"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "Registered users profiles"
+    },
+    "ai_threads/{userId}/messages/{messageId}": {
+      "schema": "AiMessage",
+      "description": "User's persistent private AI Assistant chat thread history"
+    },
+    "chats/{chatId}": {
+      "schema": "Chat",
+      "description": "Chat conversations metadata"
+    },
+    "chats/{chatId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Individual chat messages"
+    },
+    "notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "Notifications list"
+    },
+    "payment_config/{configId}": {
+      "schema": "PaymentConfig",
+      "description": "Payment bank name and account details config"
+    }
+  }
+}
