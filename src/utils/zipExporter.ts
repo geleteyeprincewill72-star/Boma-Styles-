@@ -20,7 +20,7 @@ const FILES_TO_ZIP = [
   'android/variables.gradle',
   'android/app/build.gradle',
   'android/app/src/main/AndroidManifest.xml',
-  'android/app/src/main/java/com/geleteye/omnisphere/MainActivity.kt',
+  'android/app/src/main/java/app/aura/web/MainActivity.kt',
   'src/main.tsx',
   'src/index.css',
   'src/App.tsx',
@@ -150,27 +150,21 @@ function getFallbackFileContent(filePath: string): string {
 
     case 'capacitor.config.json':
       return JSON.stringify({
-        appId: "com.geleteye.omnisphere",
-        appName: "OmniSphere Native",
+        appId: "app.aura.web",
+        appName: "Aura",
         webDir: "dist",
         bundledWebRuntime: false
       }, null, 2);
 
-    case 'android/app/src/main/java/com/geleteye/omnisphere/MainActivity.kt':
-      return `package com.geleteye.omnisphere
+    case 'android/app/src/main/java/app/aura/web/MainActivity.kt':
+      return `package app.aura.web
 
 import android.os.Bundle
 import com.getcapacitor.BridgeActivity
-import com.google.android.gms.ads.MobileAds
 
 class MainActivity : BridgeActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        try {
-            MobileAds.initialize(this) { }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
     }
 }`;
 

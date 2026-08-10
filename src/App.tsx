@@ -56,6 +56,7 @@ import NotificationsSection from './components/NotificationsSection';
 import AdminDashboardSection from './components/AdminDashboardSection';
 import SovereignDiscoverySection from './components/SovereignDiscoverySection';
 import MonetizationSection from './components/MonetizationSection';
+import { AdsterraGlobalScripts } from './components/AdsterraAd';
 import VideoHubSection from './components/VideoHubSection';
 import VideoTheaterSection from './components/VideoTheaterSection';
 import { OmniMindSection } from './components/OmniMindSection';
@@ -293,16 +294,16 @@ export default function App() {
       setGateError('');
       setGatePasscode('');
     } else {
-      setGateError("Invalid Creator Security Token. (Hint: Use owner passcode '0815')");
+      setGateError("Invalid Creator Security Token.");
     }
   };
   
   // Dynamic Payment configuration state from Firestore (Live subscription)
   const [paymentConfig, setPaymentConfig] = useState<PaymentConfig>({
-    accountName: 'BOMA ARIBITE PRINCEWILL',
-    bankName: 'OPAY',
-    accountNumber: '7041224113',
-    adminPhoneNumber: '08033405247',
+    accountName: 'Aura Primary Vault',
+    bankName: 'Aura Treasury Bank',
+    accountNumber: '0000000000',
+    adminPhoneNumber: '0000000000',
     totalMonetizedAmount: 0,
     totalDataReplicated: 0,
     totalViewsMonetized: 0
@@ -314,18 +315,10 @@ export default function App() {
 
   const userPhoneClean = (userProfile?.phoneNumber || '').replace(/[^0-9]/g, '');
   const isAppCreator = isCreatorVerified ||
-    currentUser?.email?.toLowerCase() === 'geleteyeprincewill72@gmail.com' ||
-    userProfile?.username === 'bios_styles' ||
+    currentUser?.email?.toLowerCase()?.includes('admin@aura.net') ||
+    userProfile?.username === 'aura_admin' ||
     userProfile?.role === 'admin' ||
-    currentUser?.uid?.includes('fb_bios_styles_node') ||
-    userPhoneClean.includes('09114900763') ||
-    userPhoneClean.includes('2519114900763') ||
-    userPhoneClean.includes('9114900763') ||
-    userPhoneClean.includes('08033405247') ||
-    (userProfile?.phoneNumber && (
-      userProfile.phoneNumber.replace(/\s+/g, '') === (paymentConfig.adminPhoneNumber || '08033405247').replace(/\s+/g, '') ||
-      (paymentConfig.adminPhoneNumber && userProfile.phoneNumber.includes(paymentConfig.adminPhoneNumber))
-    ));
+    currentUser?.uid?.includes('aura_admin');
 
   const [isExportingCreatorZip, setIsExportingCreatorZip] = useState(false);
   const [creatorZipProgress, setCreatorZipProgress] = useState(0);
@@ -703,14 +696,14 @@ export default function App() {
             isAiPost: false
           },
           {
-            id: 'seeded_princewill',
-            authorName: 'Princewill Geleteye',
+            id: 'seeded_aura_creator',
+            authorName: 'Aura Creator',
             authorPublicKey: '30820122300d06092a864886f70d01010105000382010f003082010a0282010100p8192',
             authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=60',
             type: 'media',
             timestamp: Date.now() - 2400000,
             content: 'Sunday courtyard style check. Clean blue short-sleeve shirt, dark trousers & crisp loafers. Step out with confidence and keep building! 🌿✨',
-            signature: 'sig_seeded_princewill',
+            signature: 'sig_seeded_aura_creator',
             mediaUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=800&auto=format&fit=crop&q=60',
             mediaThumbnail: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=800&auto=format&fit=crop&q=60',
             likes: 189,
@@ -981,6 +974,9 @@ export default function App() {
       isLight ? 'bg-slate-50 text-slate-800 animate-fade-in' : 'bg-[#070B13] text-slate-100'
     }`}>
       
+      {/* Adsterra Network Global Script Engine */}
+      <AdsterraGlobalScripts />
+
       {/* Operating System / Web Version Update Checker */}
       <AppVersionNotifier />
       
@@ -1458,11 +1454,11 @@ export default function App() {
                       </div>
                       <div>
                         <h3 className="text-sm font-bold text-slate-100 font-sans flex items-center gap-2">
-                          <span>Welcome {userProfile?.displayName || 'Nanman Gwotmut'} (App Creator)</span>
+                          <span>Welcome {userProfile?.displayName || 'Admin'} (Aura Control)</span>
                           <span className="text-[9px] bg-emerald-950 text-emerald-400 border border-emerald-800 px-1.5 py-0.5 rounded font-mono uppercase font-semibold">Active Monetization Engine</span>
                         </h3>
                         <p className="text-xs text-slate-400 leading-relaxed font-sans">
-                          Your live swarm data-to-value transformation matrix is running. Every single viewer activity, navigation step, video watch-time block and comment has been connected to your central OPAY account.
+                          Your live swarm data-to-value transformation matrix is running. Every single viewer activity, navigation step, video watch-time block and comment has been connected to your central Aura Treasury Vault.
                         </p>
                       </div>
                     </div>
@@ -1616,7 +1612,7 @@ export default function App() {
                     <div className="absolute right-0 sm:right-auto sm:-left-20 top-full mt-2 w-72 sm:w-80 bg-slate-950 border border-amber-500/50 rounded-xl p-3.5 shadow-2xl opacity-0 group-hover/tooltip:opacity-100 transition-all duration-200 pointer-events-none group-hover/tooltip:pointer-events-auto z-50 text-left font-sans space-y-2">
                       <div className="flex items-center justify-between border-b border-amber-900/50 pb-1.5 font-mono text-[10px] text-amber-400 font-bold uppercase">
                         <span className="flex items-center gap-1"><Crown className="w-3.5 h-3.5 text-amber-400" /> Technical Advantages</span>
-                        <span>OmniSphere Core</span>
+                        <span>Aura Core</span>
                       </div>
                       <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
                         Technical benefits unlocked on higher membership tiers:
@@ -1732,7 +1728,7 @@ export default function App() {
                       type="password"
                       value={gatePasscode}
                       onChange={e => setGatePasscode(e.target.value)}
-                      placeholder="Enter Security Token (e.g. 0815)"
+                      placeholder="Enter Security Token"
                       className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-2.5 text-slate-100 font-mono text-center tracking-widest text-sm focus:outline-none focus:border-emerald-500"
                       required
                     />
@@ -1871,7 +1867,7 @@ export default function App() {
                       type="password"
                       value={gatePasscode}
                       onChange={e => setGatePasscode(e.target.value)}
-                      placeholder="Enter Security Token (e.g. 0815)"
+                      placeholder="Enter Security Token"
                       className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-2.5 text-slate-100 font-mono text-center tracking-widest text-sm focus:outline-none focus:border-emerald-500"
                       required
                     />

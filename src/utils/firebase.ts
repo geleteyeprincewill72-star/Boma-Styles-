@@ -777,10 +777,10 @@ export async function fetchPaymentConfig(): Promise<PaymentConfig> {
     if (docSnap.exists()) {
       const data = docSnap.data();
       return {
-        accountName: data.accountName || 'BOMA ARIBITE PRINCEWILL',
-        bankName: data.bankName || 'OPAY',
-        accountNumber: data.accountNumber || '7041224113',
-        adminPhoneNumber: data.adminPhoneNumber || '08033405247',
+        accountName: data.accountName || 'Aura Sovereign Treasury',
+        bankName: data.bankName || 'Aura Treasury Bank',
+        accountNumber: data.accountNumber || '0000000000',
+        adminPhoneNumber: data.adminPhoneNumber || '08000000000',
         totalMonetizedAmount: data.totalMonetizedAmount || 0,
         totalDataReplicated: data.totalDataReplicated || 0,
         totalViewsMonetized: data.totalViewsMonetized || 0,
@@ -788,10 +788,10 @@ export async function fetchPaymentConfig(): Promise<PaymentConfig> {
     } else {
       // Create with default values so it's seeded in the DB immediately
       const defaultConfig: PaymentConfig = {
-        accountName: 'BOMA ARIBITE PRINCEWILL',
-        bankName: 'OPAY',
-        accountNumber: '7041224113',
-        adminPhoneNumber: '08033405247',
+        accountName: 'Aura Sovereign Treasury',
+        bankName: 'Aura Treasury Bank',
+        accountNumber: '0000000000',
+        adminPhoneNumber: '08000000000',
         totalMonetizedAmount: 0,
         totalDataReplicated: 0,
         totalViewsMonetized: 0,
@@ -805,10 +805,10 @@ export async function fetchPaymentConfig(): Promise<PaymentConfig> {
   } catch (err) {
     console.warn('PWA: Failed to fetch payment config from Firestore, using default:', err);
     return {
-      accountName: 'BOMA ARIBITE PRINCEWILL',
-      bankName: 'OPAY',
-      accountNumber: '7041224113',
-      adminPhoneNumber: '08033405247',
+      accountName: 'Aura Sovereign Treasury',
+      bankName: 'Aura Treasury Bank',
+      accountNumber: '0000000000',
+      adminPhoneNumber: '08000000000',
       totalMonetizedAmount: 0,
       totalDataReplicated: 0,
       totalViewsMonetized: 0,
@@ -823,7 +823,7 @@ export async function updatePaymentConfig(bankName: string, accountNumber: strin
     const payload: any = {
       bankName,
       accountNumber,
-      accountName: accountName || 'BOMA ARIBITE PRINCEWILL',
+      accountName: accountName || 'Aura Sovereign Treasury',
       updatedAt: Date.now()
     };
     if (adminPhoneNumber !== undefined) {
@@ -837,7 +837,7 @@ export async function updatePaymentConfig(bankName: string, accountNumber: strin
 
 /**
  * Transforms peer-to-peer visual interactions, messaging, streaming and navigation 
- * into actual monetized earnings credited live to the creator's central OPAY node account.
+ * into actual monetized earnings credited live to the central Aura treasury node account.
  */
 export async function trackPeerActionMonetization(actionName: string, dataSizeMB: number = 0.5): Promise<{ addedMoney: number; addedMB: number }> {
   const path = 'payment_config/config';
@@ -871,20 +871,20 @@ export function listenToPaymentConfig(callback: (config: PaymentConfig) => void)
     if (docSnap.exists()) {
       const data = docSnap.data();
       callback({
-        accountName: data.accountName || 'BOMA ARIBITE PRINCEWILL',
-        bankName: data.bankName || 'OPAY',
-        accountNumber: data.accountNumber || '7041224113',
-        adminPhoneNumber: data.adminPhoneNumber || '08033405247',
+        accountName: data.accountName || 'Aura Sovereign Treasury',
+        bankName: data.bankName || 'Aura Treasury Bank',
+        accountNumber: data.accountNumber || '0000000000',
+        adminPhoneNumber: data.adminPhoneNumber || '08000000000',
         totalMonetizedAmount: data.totalMonetizedAmount || 0,
         totalDataReplicated: data.totalDataReplicated || 0,
         totalViewsMonetized: data.totalViewsMonetized || 0,
       });
     } else {
       callback({
-        accountName: 'BOMA ARIBITE PRINCEWILL',
-        bankName: 'OPAY',
-        accountNumber: '7041224113',
-        adminPhoneNumber: '08033405247',
+        accountName: 'Aura Sovereign Treasury',
+        bankName: 'Aura Treasury Bank',
+        accountNumber: '0000000000',
+        adminPhoneNumber: '08000000000',
         totalMonetizedAmount: 0,
         totalDataReplicated: 0,
         totalViewsMonetized: 0,

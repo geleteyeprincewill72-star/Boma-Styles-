@@ -392,7 +392,7 @@ export default function VideoHubSection({
                 type="text" 
                 value={newTitle}
                 onChange={e => setNewTitle(e.target.value)}
-                placeholder="e.g. Swarm Decoded Lecture"
+                placeholder="Stream Title"
                 className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-slate-100"
                 required
               />
@@ -403,7 +403,7 @@ export default function VideoHubSection({
                 type="url" 
                 value={newThumbnailUrl}
                 onChange={e => setNewThumbnailUrl(e.target.value)}
-                placeholder="e.g. https://images.unsplash.com/..."
+                placeholder="https://images.unsplash.com/..."
                 className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-slate-100"
               />
             </div>
@@ -413,7 +413,7 @@ export default function VideoHubSection({
                 type="url" 
                 value={newVideoUrl}
                 onChange={e => setNewVideoUrl(e.target.value)}
-                placeholder="e.g. https://assets.mixkit.co/videos/preview/..."
+                placeholder="https://..."
                 className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-slate-100 font-mono text-pink-400"
                 required
               />
@@ -845,7 +845,7 @@ export default function VideoHubSection({
                             type="text"
                             value={tipCardName}
                             onChange={e => setTipCardName(e.target.value.toUpperCase())}
-                            placeholder="e.g. Cynthia Vane"
+                            placeholder="Cardholder Name"
                             className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-1.5 text-slate-100"
                             required
                           />
@@ -856,7 +856,7 @@ export default function VideoHubSection({
                             type="text"
                             value={tipCardNumber}
                             onChange={handleCardNumberChange}
-                            placeholder="e.g. 4000 1234 5678 9010"
+                            placeholder="Card Number"
                             className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-1.5 text-slate-100"
                             required
                           />

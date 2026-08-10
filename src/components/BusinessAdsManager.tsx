@@ -189,7 +189,7 @@ export default function BusinessAdsManager({
                   type="text" 
                   value={campaignTitle}
                   onChange={e => setCampaignTitle(e.target.value)}
-                  placeholder="e.g. Aura Premium Mesh"
+                  placeholder="Campaign Name"
                   className="w-full bg-slate-950 border border-slate-850 rounded px-2.5 py-2 text-slate-100 focus:outline-none focus:border-cyan-500"
                   required
                 />
@@ -200,7 +200,7 @@ export default function BusinessAdsManager({
                   type="text" 
                   value={adCtaText}
                   onChange={e => setAdCtaText(e.target.value)}
-                  placeholder="e.g. Try Beta Node"
+                  placeholder="Button Label"
                   className="w-full bg-slate-950 border border-slate-850 rounded px-2.5 py-2 text-slate-100 focus:outline-none focus:border-cyan-500"
                   required
                 />

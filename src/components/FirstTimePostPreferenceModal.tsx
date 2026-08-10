@@ -235,7 +235,7 @@ export const FirstTimePostPreferenceModal: React.FC<Props> = ({
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="E.g., I want my posts to be informative videos, mobile tech updates, and creative storytelling vlogs with engaging captions..."
+                placeholder="Describe your post style and content interests..."
                 rows={2.5}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400 transition font-sans shadow-inner"
               />
@@ -249,7 +249,7 @@ export const FirstTimePostPreferenceModal: React.FC<Props> = ({
               <textarea
                 value={feedWishlist}
                 onChange={(e) => setFeedWishlist(e.target.value)}
-                placeholder="E.g., Show me trending AI news, comedy clips like TikTok/YouTube Shorts, crypto insights, and high-definition video broadcasts..."
+                placeholder="Describe what content you would like to see in your feed..."
                 rows={2.5}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition font-sans shadow-inner"
               />

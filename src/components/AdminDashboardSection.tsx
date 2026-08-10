@@ -102,9 +102,7 @@ export default function AdminDashboardSection({
 
   // 11-Point Precision Location Telemetry Helper
   const getUserDetailedLocationTelemetry = (user: UserProfile, index: number) => {
-    const isCreator = user.role === 'admin' || 
-                      user.phoneNumber?.includes('09114900763') || 
-                      user.phoneNumber?.includes('08033405247');
+    const isCreator = user.role === 'admin';
 
     let continent = "Africa";
     let country = "Nigeria";
@@ -387,8 +385,8 @@ export default function AdminDashboardSection({
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   // Billing Dynamic Config States
-  const [adminBankName, setAdminBankName] = useState('OPAY');
-  const [adminAccountNumber, setAdminAccountNumber] = useState('7041224113');
+  const [adminBankName, setAdminBankName] = useState('Aura Treasury Bank');
+  const [adminAccountNumber, setAdminAccountNumber] = useState('0000000000');
   const [isSavingBilling, setIsSavingBilling] = useState(false);
   const [billingSuccess, setBillingSuccess] = useState(false);
   const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequestDoc[]>([]);
@@ -955,7 +953,7 @@ export default function AdminDashboardSection({
               </div>
               <div>
                 <span className="text-slate-500 block text-[9px] uppercase">Primary Revenue Payout</span>
-                <span className="font-bold text-amber-300 font-mono">OPAY 7041224113 (50%)</span>
+                <span className="font-bold text-amber-300 font-mono">Aura Primary Vault (50%)</span>
               </div>
             </div>
 
@@ -973,12 +971,12 @@ export default function AdminDashboardSection({
                 <span className="text-[10px] text-emerald-400 uppercase font-bold bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
                   PRIMARY PAYOUT ACCOUNT
                 </span>
-                <span className="text-[10px] text-slate-500">OPAY NETWORK</span>
+                <span className="text-[10px] text-slate-500">AURA NETWORK</span>
               </div>
               <div className="space-y-1 text-slate-300">
-                <div className="flex justify-between"><span className="text-slate-500">Name:</span> <span className="font-bold text-slate-100">BOMA ARIBITE PRINCEWILL</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">Bank:</span> <span className="font-bold text-emerald-300">OPAY</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">Account No:</span> <span className="font-bold text-cyan-300">7041224113</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Name:</span> <span className="font-bold text-slate-100">Aura Primary Vault</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Bank:</span> <span className="font-bold text-emerald-300">Aura Treasury Bank</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Account No:</span> <span className="font-bold text-cyan-300">0000000000</span></div>
               </div>
             </div>
 
@@ -988,11 +986,11 @@ export default function AdminDashboardSection({
                 <span className="text-[10px] text-cyan-400 uppercase font-bold bg-cyan-950 px-2 py-0.5 rounded border border-cyan-800">
                   SECONDARY PAYOUT ACCOUNT
                 </span>
-                <span className="text-[10px] text-slate-500">OPAY NETWORK</span>
+                <span className="text-[10px] text-slate-500">AURA NETWORK</span>
               </div>
               <div className="space-y-1 text-slate-300">
-                <div className="flex justify-between"><span className="text-slate-500">Name:</span> <span className="font-bold text-slate-100">Gwotmut Nanman</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">Bank:</span> <span className="font-bold text-emerald-300">OPAY</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Name:</span> <span className="font-bold text-slate-100">Aura Secondary Vault</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Bank:</span> <span className="font-bold text-emerald-300">Aura Treasury Bank</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Account No:</span> <span className="text-slate-400 italic">Secondary Standby</span></div>
               </div>
             </div>
@@ -1008,7 +1006,7 @@ export default function AdminDashboardSection({
                   required
                   value={adminBankName}
                   onChange={e => setAdminBankName(e.target.value.toUpperCase())}
-                  placeholder="e.g. OPAY"
+                  placeholder="Aura Treasury Bank"
                   className="w-full bg-slate-900 border border-slate-800 focus:border-red-500 rounded-lg p-3 text-xs text-slate-200 uppercase focus:outline-none"
                 />
               </div>
@@ -1020,7 +1018,7 @@ export default function AdminDashboardSection({
                   required
                   value={adminAccountNumber}
                   onChange={e => setAdminAccountNumber(e.target.value)}
-                  placeholder="e.g. 7041224113"
+                  placeholder="0000000000"
                   className="w-full bg-slate-900 border border-slate-800 focus:border-red-500 rounded-lg p-3 text-xs text-slate-200 focus:outline-none"
                 />
               </div>
@@ -1088,10 +1086,10 @@ export default function AdminDashboardSection({
                         </td>
                         <td className="py-3 text-[10px] space-y-0.5">
                           <div className="text-slate-300">
-                            <span className="text-emerald-400 font-bold">50% Primary:</span> BOMA ARIBITE PRINCEWILL (${(req.amountUSD/2).toFixed(2)})
+                            <span className="text-emerald-400 font-bold">50% Primary:</span> Aura Primary Vault (${(req.amountUSD/2).toFixed(2)})
                           </div>
                           <div className="text-slate-300">
-                            <span className="text-cyan-400 font-bold">50% Secondary:</span> Gwotmut Nanman (${(req.amountUSD/2).toFixed(2)})
+                            <span className="text-cyan-400 font-bold">50% Secondary:</span> Aura Secondary Vault (${(req.amountUSD/2).toFixed(2)})
                           </div>
                         </td>
                         <td className="py-3">
@@ -1197,7 +1195,7 @@ export default function AdminDashboardSection({
                 <input
                   type="text"
                   required
-                  placeholder="e.g. usr_102, dev_x8f, 192.168.1.1"
+                  placeholder="Target User ID, Peer ID, or IP Address"
                   value={banTargetInput}
                   onChange={(e) => setBanTargetInput(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 font-mono focus:border-red-500 focus:outline-none"
@@ -1209,7 +1207,7 @@ export default function AdminDashboardSection({
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Automated bot spamming, brute force attempt"
+                  placeholder="Reason for restriction"
                   value={banReasonInput}
                   onChange={(e) => setBanReasonInput(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 font-mono focus:border-red-500 focus:outline-none"
@@ -1516,7 +1514,7 @@ export default function AdminDashboardSection({
                     <label className="text-[10px] text-slate-500 uppercase">Plan Name</label>
                     <input
                       type="text"
-                      placeholder="e.g. Enterprise Archon"
+                      placeholder="Plan Name"
                       value={newPlanName}
                       onChange={(e) => setNewPlanName(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"
@@ -2056,7 +2054,7 @@ export default function AdminDashboardSection({
                 </span>
               </h3>
               <p className="text-xs text-slate-400 font-mono mt-0.5">
-                Authorized Creator Phone Access: <span className="text-amber-400 font-bold">09 11 4900 763</span> & <span className="text-slate-400">08033405247</span>
+                Authorized Admin Control Gateway & Complete Source Bundle
               </p>
             </div>
           </div>
@@ -2090,8 +2088,8 @@ export default function AdminDashboardSection({
             </button>
 
             <a
-              href="/api/download-project-zip?creatorPhone=09114900763"
-              download="omnisphere-creator-source.zip"
+              href="/api/download-project-zip"
+              download="aura-creator-source.zip"
               className="px-5 py-3.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-amber-500/40 text-amber-300 font-mono text-xs rounded-xl transition flex items-center justify-center gap-2 shrink-0"
             >
               <Download className="w-4 h-4 text-amber-400" />

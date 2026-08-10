@@ -55,9 +55,9 @@ export default function WalletSection({ username, myPublicKey, balance, setBalan
 
   // Dynamic Payment configuration state from Firestore
   const [paymentConfig, setPaymentConfig] = useState<{ bankName: string; accountNumber: string; accountName: string }>({
-    bankName: 'OPAY',
-    accountNumber: '7041224113',
-    accountName: 'BOMA ARIBITE PRINCEWILL'
+    bankName: 'Aura Treasury Bank',
+    accountNumber: '0000000000',
+    accountName: 'Aura Sovereign Treasury'
   });
 
   useEffect(() => {
@@ -67,9 +67,9 @@ export default function WalletSection({ username, myPublicKey, balance, setBalan
         const config = await fetchPaymentConfig();
         if (active) {
           setPaymentConfig({
-            bankName: config.bankName || 'OPAY',
-            accountNumber: config.accountNumber || '7041224113',
-            accountName: config.accountName || 'BOMA ARIBITE PRINCEWILL'
+            bankName: config.bankName || 'Aura Treasury Bank',
+            accountNumber: config.accountNumber || '0000000000',
+            accountName: config.accountName || 'Aura Sovereign Treasury'
           });
         }
       } catch (err) {
@@ -170,7 +170,7 @@ export default function WalletSection({ username, myPublicKey, balance, setBalan
     let reqId = `pay_${Date.now()}`;
     const methodName = paymentMethod === 'paystack' ? 'Paystack Direct (OPAY)' : paymentMethod === 'wire' ? 'Bank Direct (OPAY)' : 'Crypto Key Address';
     
-    let statusReasonText = "Withdrawal request submitted & recorded in database. Pending automated payment gateway API settlement or manual 50/50 revenue sharing payout to Primary Account (BOMA ARIBITE PRINCEWILL / OPAY: 7041224113) & Secondary Account (Gwotmut Nanman / OPAY).";
+    let statusReasonText = "Withdrawal request submitted & recorded in database. Pending automated payment gateway API settlement or manual 50/50 revenue sharing payout to Primary Protocol Vault & Secondary Reserve Vault.";
     let finalStatus: 'Pending Settlement' | 'Completed' | 'Failed' = 'Pending Settlement';
 
     // Dispatch to Paystack Transfer API Endpoint on server
@@ -190,7 +190,7 @@ export default function WalletSection({ username, myPublicKey, balance, setBalan
       
       if (pData.success && pData.status === 'SUCCESS') {
         finalStatus = 'Completed';
-        statusReasonText = `Paystack Transfer Confirmed! Reference: ${pData.reference}. Deposited to OPAY 7041224113 with 50/50 split executed.`;
+        statusReasonText = `Paystack Transfer Confirmed! Reference: ${pData.reference}. Deposited to Primary Vault with 50/50 split executed.`;
       } else if (pData.status === 'FAILED') {
         finalStatus = 'Failed';
         statusReasonText = `Paystack Transfer Failed: ${pData.message || 'Check recipient details or bank gateway status'}`;
@@ -212,14 +212,14 @@ export default function WalletSection({ username, myPublicKey, balance, setBalan
       status: finalStatus,
       statusReason: statusReasonText,
       primaryAccountShare: {
-        name: 'BOMA ARIBITE PRINCEWILL',
-        bank: 'OPAY',
-        accountNumber: '7041224113',
+        name: 'Aura Primary Vault',
+        bank: 'Aura Treasury Bank',
+        accountNumber: '0000000000',
         amountUSD: splitUSD
       },
       secondaryAccountShare: {
-        name: 'Gwotmut Nanman',
-        bank: 'OPAY',
+        name: 'Aura Secondary Vault',
+        bank: 'Aura Treasury Bank',
         accountNumber: 'Secondary Standby',
         amountUSD: splitUSD
       },
@@ -266,8 +266,8 @@ export default function WalletSection({ username, myPublicKey, balance, setBalan
 
   const handleRequestApproval = () => {
     setErrorMessage('');
-    // Simulated request to the app creator
-    alert("Decentralized access token requested. A notification has been routed to Princewill's device for secure signature approval.");
+    // Simulated request to the system admin
+    alert("Decentralized access token requested. A notification has been routed to System Admin for secure signature approval.");
   };
 
   const handleOwnerApprove = () => {
@@ -276,7 +276,7 @@ export default function WalletSection({ username, myPublicKey, balance, setBalan
       setApprovalPending(false);
       setCreatorUnlocked(true);
     } else {
-      setErrorMessage("Invalid Creator Authorization Passcode. (Hint: Use owner passcode '0815')");
+      setErrorMessage("Invalid Creator Authorization Passcode.");
     }
   };
 
@@ -298,7 +298,7 @@ export default function WalletSection({ username, myPublicKey, balance, setBalan
           <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
           <div>
             <div className="text-[10px] uppercase font-mono text-emerald-400 font-bold leading-none">Primary Payout Node Configured</div>
-            <div className="text-xs text-slate-200 font-mono mt-1 font-semibold">OPAY 7041224113 (Paystack)</div>
+            <div className="text-xs text-slate-200 font-mono mt-1 font-semibold">Aura Sovereign Treasury</div>
           </div>
         </div>
       </div>
@@ -453,7 +453,7 @@ export default function WalletSection({ username, myPublicKey, balance, setBalan
                     type="text"
                     value={payoutAddress}
                     onChange={(e) => setPayoutAddress(e.target.value)}
-                    placeholder="e.g. email or bank details"
+                    placeholder="Enter account or payment details"
                     className="w-full bg-slate-950 border border-slate-850 rounded-lg p-2.5 text-xs text-slate-100 font-mono focus:outline-none focus:border-emerald-500"
                     required
                   />
@@ -471,7 +471,7 @@ export default function WalletSection({ username, myPublicKey, balance, setBalan
           </form>
         </div>
 
-        {/* SECURE CREATOR PAYOUT VAULT (OPAY NIGERIA - 08154561612) */}
+        {/* SECURE CREATOR PAYOUT VAULT */}
         <div className="md:col-span-5 bg-[#0A0F1D] border border-slate-900 rounded-2xl p-6 flex flex-col justify-between space-y-4">
           <div>
             <h3 className="text-xs font-bold text-emerald-400 font-mono uppercase tracking-wider flex items-center gap-1.5">
@@ -479,7 +479,7 @@ export default function WalletSection({ username, myPublicKey, balance, setBalan
               Creator Payout Vault
             </h3>
             <p className="text-[11px] text-slate-400 font-sans mt-2 leading-relaxed">
-              Compensation routing ledger for platform creators. Standard users have no access to these credentials. Unlocking require digital approval by the App creator (Princewill).
+              Compensation routing ledger for platform creators. Standard users have no access to these credentials. Unlocking requires digital approval by System Admin.
             </p>
           </div>
 
@@ -488,7 +488,7 @@ export default function WalletSection({ username, myPublicKey, balance, setBalan
             <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-850 space-y-3">
               <div className="flex items-center gap-2 text-amber-400 font-mono text-[10px]">
                 <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
-                <span>STATUS: LOCKED & PENDING CREATOR APPROVAL</span>
+                <span>STATUS: LOCKED & PENDING ADMIN APPROVAL</span>
               </div>
               
               <div className="space-y-1">
@@ -497,7 +497,7 @@ export default function WalletSection({ username, myPublicKey, balance, setBalan
                   type="password"
                   value={passcode}
                   onChange={(e) => setPasscode(e.target.value)}
-                  placeholder="Enter Passcode (e.g. 0815)"
+                  placeholder="Enter Passcode"
                   className="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs font-mono text-slate-200 focus:outline-none focus:border-emerald-500"
                 />
               </div>
@@ -535,7 +535,7 @@ export default function WalletSection({ username, myPublicKey, balance, setBalan
               <div className="space-y-2 border-t border-emerald-500/10 pt-2.5">
                 <div>
                   <span className="text-[9px] uppercase font-mono text-slate-500">Destination Bank</span>
-                  <div className="text-xs font-bold text-slate-200 font-mono">{paymentConfig.bankName} NIGERIA</div>
+                  <div className="text-xs font-bold text-slate-200 font-mono">{paymentConfig.bankName}</div>
                 </div>
                 <div>
                   <span className="text-[9px] uppercase font-mono text-slate-500">Account Number</span>
@@ -547,26 +547,18 @@ export default function WalletSection({ username, myPublicKey, balance, setBalan
 
               <div className="text-[9px] font-mono text-slate-500 leading-normal border-t border-emerald-500/10 pt-2 flex items-center gap-1">
                 <CheckCircle className="w-3 h-3 text-emerald-400" />
-                <span>Tips and ad revenue streams successfully routing to OPAY endpoint.</span>
+                <span>Tips and ad revenue streams successfully routing to Aura Treasury endpoint.</span>
               </div>
 
-              {/* OPAY Facebook Chat Notification Alert */}
-              <div className="bg-gradient-to-r from-blue-950/80 to-slate-900 border border-blue-500/40 p-3 rounded-xl space-y-1.5 text-xs font-mono">
-                <div className="text-blue-400 font-bold uppercase text-[9px] flex items-center justify-between">
-                  <span>OPAY Notification Alert</span>
-                  <span className="text-amber-300 font-normal">08154561612</span>
+              {/* Protocol Support Portal Alert */}
+              <div className="bg-gradient-to-r from-cyan-950/80 to-slate-900 border border-cyan-500/40 p-3 rounded-xl space-y-1.5 text-xs font-mono">
+                <div className="text-cyan-400 font-bold uppercase text-[9px] flex items-center justify-between">
+                  <span>Aura Treasury Portal</span>
+                  <span className="text-emerald-300 font-normal">Active Vault</span>
                 </div>
                 <p className="text-[10px] text-slate-300 leading-normal">
-                  📢 <strong>Notice to OPAY Holder:</strong> Money gained has entered your OPAY node! Please chat me on Facebook at <strong className="text-amber-300">"Bios Styles"</strong> immediately to confirm you have seen it.
+                  📢 <strong>Notice to Creator:</strong> All generated funds are recorded in the sovereign ledger and automatically processed.
                 </p>
-                <a
-                  href="https://facebook.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[9px] font-bold uppercase px-2.5 py-1 rounded transition mt-1"
-                >
-                  <span>Chat "Bios Styles" On Facebook</span>
-                </a>
               </div>
             </div>
           )}
@@ -578,7 +570,7 @@ export default function WalletSection({ username, myPublicKey, balance, setBalan
             </div>
             <div className="flex gap-1.5">
               <span className="text-emerald-400">✔</span>
-              <span>Requires Princewill approval for viewing access.</span>
+              <span>Requires System Admin approval for viewing access.</span>
             </div>
           </div>
         </div>
@@ -694,11 +686,11 @@ export default function WalletSection({ username, myPublicKey, balance, setBalan
               <div className="space-y-1 text-[11px]">
                 <div className="flex justify-between">
                   <span className="text-slate-400">Primary Account (50%):</span>
-                  <span className="text-slate-200 font-bold">BOMA ARIBITE PRINCEWILL (OPAY 7041224113) - ${(selectedTxDetail.primaryShareUSD || (selectedTxDetail.amount * exchangeRate) / 2).toFixed(2)} USD</span>
+                  <span className="text-slate-200 font-bold">Aura Primary Vault - ${(selectedTxDetail.primaryShareUSD || (selectedTxDetail.amount * exchangeRate) / 2).toFixed(2)} USD</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Secondary Account (50%):</span>
-                  <span className="text-slate-200 font-bold">Gwotmut Nanman (OPAY Secondary Standby) - ${(selectedTxDetail.secondaryShareUSD || (selectedTxDetail.amount * exchangeRate) / 2).toFixed(2)} USD</span>
+                  <span className="text-slate-200 font-bold">Aura Secondary Vault - ${(selectedTxDetail.secondaryShareUSD || (selectedTxDetail.amount * exchangeRate) / 2).toFixed(2)} USD</span>
                 </div>
               </div>
             </div>

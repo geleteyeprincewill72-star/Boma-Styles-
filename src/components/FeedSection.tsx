@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleAdSenseAd } from './GoogleAdSenseAd';
+import { AdsterraAd } from './AdsterraAd';
 import { PostPreference } from './FirstTimePostPreferenceModal';
 import ModerationCouncilModal from './ModerationCouncilModal';
 import DecentralizedIdentityModal from './DecentralizedIdentityModal';
@@ -1194,8 +1195,8 @@ export default function FeedSection({
                               <span>Anonymous (ZK-Protocol)</span>
                             </span>
                           )}
-                          {((isSelf && isPremium) || post.authorName === 'Cypher Architect' || post.authorName === 'Lyra Vesper' || post.authorName === 'Princewill Geleteye') && (
-                            <span className="flex items-center gap-1 px-1.5 py-0.5 bg-gradient-to-r from-amber-500/20 to-rose-500/20 border border-amber-500/40 text-amber-400 rounded-full text-[9px] font-sans font-bold shadow-sm animate-pulse" title="OmniSphere Premium Verified Creator">
+                          {((isSelf && isPremium) || post.authorName === 'Cypher Architect' || post.authorName === 'Lyra Vesper' || post.authorName === 'Aura Creator') && (
+                            <span className="flex items-center gap-1 px-1.5 py-0.5 bg-gradient-to-r from-amber-500/20 to-rose-500/20 border border-amber-500/40 text-amber-400 rounded-full text-[9px] font-sans font-bold shadow-sm animate-pulse" title="Aura Verified Creator">
                               <Sparkles className="w-2.5 h-2.5 text-amber-400" />
                               <span>Verified Creator</span>
                             </span>
@@ -1580,10 +1581,14 @@ export default function FeedSection({
 
                   {!isPremium && (idx + 1) % 4 === 0 && (
                     <div className="my-6">
-                      <GoogleAdSenseAd 
-                        format={idx % 8 === 0 ? 'rectangle' : 'horizontal'} 
-                        theme={theme} 
-                      />
+                      {idx % 8 === 0 ? (
+                        <AdsterraAd unit="medium_rectangle_250" theme={theme} />
+                      ) : (
+                        <GoogleAdSenseAd 
+                          format="horizontal" 
+                          theme={theme} 
+                        />
+                      )}
                     </div>
                   )}
                 </React.Fragment>
@@ -1732,7 +1737,7 @@ export default function FeedSection({
                       type="text"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      placeholder="e.g., Client-side cryptography crash course..."
+                      placeholder="Enter video title..."
                       className="w-full bg-slate-950 border border-slate-850 rounded-lg p-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-500 font-sans"
                       required
                     />
@@ -2031,7 +2036,7 @@ export default function FeedSection({
                   type="text"
                   value={statusText}
                   onChange={(e) => setStatusText(e.target.value)}
-                  placeholder="What's your node status? (e.g. Mining blocks...)"
+                  placeholder="What's your node status?"
                   maxLength={100}
                   className="w-full bg-slate-950 border border-slate-850 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500"
                   required

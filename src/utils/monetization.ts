@@ -224,7 +224,7 @@ export function getSubscribersList(): SubscriberRecord[] {
   return [
     {
       id: 'sub_001',
-      username: 'BOMA ARIBITE PRINCEWILL',
+      username: 'AuraProtocolMember',
       planId: 'plan_superstar',
       planName: 'Superstar Plan',
       priceUSD: 399.99,
@@ -237,7 +237,7 @@ export function getSubscribersList(): SubscriberRecord[] {
     },
     {
       id: 'sub_002',
-      username: 'Gwotmut Nanman',
+      username: 'AuraSovereignPeer',
       planId: 'plan_premium',
       planName: 'Premium Plan',
       priceUSD: 199.99,

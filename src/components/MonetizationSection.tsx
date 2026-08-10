@@ -47,6 +47,7 @@ import {
 } from '../utils/monetization';
 import { SubscriptionPlans } from './SubscriptionPlans';
 import { GoogleAdSenseAd } from './GoogleAdSenseAd';
+import { AdsterraAd } from './AdsterraAd';
 
 interface MonetizationSectionProps {
   username: string;
@@ -490,7 +491,7 @@ export default function MonetizationSection({
               : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
-          Google AdSense Web
+          Ad Networks (Adsterra & AdSense)
         </button>
       </div>
 
@@ -877,7 +878,7 @@ export default function MonetizationSection({
                         type="text" 
                         value={campaignTitle}
                         onChange={e => setCampaignTitle(e.target.value)}
-                        placeholder="e.g. Swarm Prime"
+                        placeholder="Campaign Name"
                         className="w-full bg-slate-950 border border-slate-850 rounded px-2.5 py-2 text-slate-100"
                         required
                       />
@@ -888,7 +889,7 @@ export default function MonetizationSection({
                         type="text" 
                         value={adCtaText}
                         onChange={e => setAdCtaText(e.target.value)}
-                        placeholder="e.g. Learn More"
+                        placeholder="Button Label"
                         className="w-full bg-slate-950 border border-slate-850 rounded px-2.5 py-2 text-slate-100"
                         required
                       />
@@ -1090,6 +1091,58 @@ export default function MonetizationSection({
             </div>
           </div>
 
+          {/* Adsterra Sponsor Network Active Placements */}
+          {!isPremium && (
+            <div className="max-w-4xl mx-auto space-y-6 pt-6 border-t border-slate-800/80">
+              <div className="text-center space-y-1">
+                <span className="text-[10px] font-mono text-amber-400 font-bold uppercase tracking-wider bg-amber-950/60 border border-amber-800/50 px-3 py-1 rounded-full inline-flex items-center gap-1.5">
+                  <Megaphone className="w-3 h-3 text-amber-400" />
+                  Adsterra Sponsor Network Live Placements
+                </span>
+                <p className="text-xs text-slate-400 font-sans">
+                  Non-intrusive programmatic ad units powered by Adsterra High Performance Format (Cloudflare & Production Ready).
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start justify-items-center">
+                {/* Unit 1: 160x600 Skyscraper */}
+                <div className="w-full flex flex-col items-center">
+                  <span className="text-[10px] font-mono text-amber-400 font-bold uppercase mb-2">160×600 Skyscraper</span>
+                  <AdsterraAd unit="skyscraper_600" theme={isLight ? 'light' : 'dark'} />
+                </div>
+
+                {/* Unit 2: 160x300 Sidebar */}
+                <div className="w-full flex flex-col items-center">
+                  <span className="text-[10px] font-mono text-amber-400 font-bold uppercase mb-2">160×300 Half Skyscraper</span>
+                  <AdsterraAd unit="half_skyscraper_300" theme={isLight ? 'light' : 'dark'} />
+                </div>
+
+                {/* Unit 3: 300x250 Medium Rectangle */}
+                <div className="w-full flex flex-col items-center">
+                  <span className="text-[10px] font-mono text-amber-400 font-bold uppercase mb-2">300×250 Medium Rectangle</span>
+                  <AdsterraAd unit="medium_rectangle_250" theme={isLight ? 'light' : 'dark'} />
+                </div>
+              </div>
+
+              {/* Additional Adsterra Placements (Banner 468x60, Native Container, & SmartLink) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center justify-items-center pt-4 border-t border-slate-800/60">
+                <div className="w-full flex flex-col items-center">
+                  <span className="text-[10px] font-mono text-amber-400 font-bold uppercase mb-2">468×60 Banner Display</span>
+                  <AdsterraAd unit="banner_468" theme={isLight ? 'light' : 'dark'} />
+                </div>
+
+                <div className="w-full flex flex-col items-center">
+                  <span className="text-[10px] font-mono text-amber-400 font-bold uppercase mb-2">Native CPM Container</span>
+                  <AdsterraAd unit="native_container" theme={isLight ? 'light' : 'dark'} />
+                </div>
+              </div>
+
+              <div className="max-w-md mx-auto pt-2">
+                <AdsterraAd unit="direct_link" theme={isLight ? 'light' : 'dark'} />
+              </div>
+            </div>
+          )}
+
           {/* Google AdSense Web Units Preview for Web Hosting Deployment */}
           {!isPremium && (
             <div className="max-w-3xl mx-auto space-y-4 pt-4 border-t border-slate-800/80">
@@ -1153,7 +1206,7 @@ export default function MonetizationSection({
                     type="text"
                     value={cardName}
                     onChange={e => setCardName(e.target.value)}
-                    placeholder="e.g. Princewill"
+                    placeholder="Cardholder Name"
                     className="w-full bg-slate-950 border border-slate-850 rounded px-2.5 py-2 text-slate-100"
                     required
                   />

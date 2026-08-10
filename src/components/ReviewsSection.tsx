@@ -310,7 +310,7 @@ export default function ReviewsSection({
                 <textarea
                   value={likeInput}
                   onChange={(e) => setLikeInput(e.target.value)}
-                  placeholder="e.g. Clean UI layout, fast voice notes, easy OPAY payments..."
+                  placeholder="Share what you like about the app..."
                   rows={2}
                   className="w-full bg-slate-950 border border-slate-850 focus:border-emerald-500 rounded-lg p-2.5 text-xs text-slate-200 focus:outline-none resize-none font-sans"
                 />
@@ -324,7 +324,7 @@ export default function ReviewsSection({
                 <textarea
                   value={dislikeInput}
                   onChange={(e) => setDislikeInput(e.target.value)}
-                  placeholder="e.g. Needs dark theme toggle in video, faster search, more games..."
+                  placeholder="Share feedback or suggested improvements..."
                   rows={2}
                   className="w-full bg-slate-950 border border-slate-850 focus:border-amber-500 rounded-lg p-2.5 text-xs text-slate-200 focus:outline-none resize-none font-sans"
                 />

@@ -120,15 +120,12 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
 
     try {
       const cleanPhone = phoneNumberInput.replace(/[^0-9]/g, '');
-      const isCreatorPhone = cleanPhone.includes('08033405247') || 
-                             cleanPhone.includes('09114900763') || 
-                             cleanPhone.includes('2519114900763') || 
-                             cleanPhone.includes('9114900763');
+      const isCreatorPhone = cleanPhone === '08000000000' || cleanPhone.endsWith('0000000');
 
-      const simUid = isCreatorPhone ? `fb_bios_styles_node_${cleanPhone || '09114900763'}` : `phone_peer_${cleanPhone}`;
-      const simUsername = isCreatorPhone ? 'bios_styles' : `phone_${cleanPhone.slice(-4)}`;
-      const simDisplayName = isCreatorPhone ? 'OmniSphere Creator' : `Phone Peer (${phoneNumberInput.trim()})`;
-      const simEmail = isCreatorPhone ? 'creator@omnisphere.net' : `peer_${cleanPhone}@phone.node`;
+      const simUid = isCreatorPhone ? `fb_aura_admin_node_${cleanPhone || '0000000000'}` : `phone_peer_${cleanPhone}`;
+      const simUsername = isCreatorPhone ? 'aura_admin' : `phone_${cleanPhone.slice(-4)}`;
+      const simDisplayName = isCreatorPhone ? 'Aura Creator' : `Phone Peer (${phoneNumberInput.trim()})`;
+      const simEmail = isCreatorPhone ? 'creator@aura.net' : `peer_${cleanPhone}@phone.node`;
       const avatar = isCreatorPhone 
         ? `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=60`
         : `https://api.dicebear.com/7.x/bottts/svg?seed=${simUid}`;
@@ -139,7 +136,7 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
         displayName: simDisplayName,
         email: simEmail,
         phoneNumber: phoneNumberInput.trim(),
-        bio: isCreatorPhone ? 'OmniSphere Creator Account. Full admin control & Source ZIP access enabled.' : 'Verified phone node peer.',
+        bio: isCreatorPhone ? 'Aura Creator Account. Full admin control & Source ZIP access enabled.' : 'Verified phone node peer.',
         avatar: avatar,
         coverPhoto: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=60',
         website: '',
@@ -213,26 +210,25 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
       const user = result.user;
       
       if (user) {
-        const isBiosStyles = 
-          (user.displayName && user.displayName.toLowerCase().includes('bios styles')) ||
-          (user.phoneNumber && (user.phoneNumber.includes('08033405247') || user.phoneNumber.includes('080 334 05247'))) ||
-          (user.email && (user.email.toLowerCase().includes('biosstyles') || user.email.includes('08033405247')));
+        const isAuraAdmin = 
+          (user.displayName && user.displayName.toLowerCase().includes('aura admin')) ||
+          (user.email && user.email.toLowerCase().includes('aura.net'));
 
-        const role = isBiosStyles ? 'admin' : 'user';
-        const finalUsername = isBiosStyles ? 'bios_styles' : `${user.displayName?.toLowerCase().replace(/\s+/g, '') || 'fb_peer'}_${Math.floor(Math.random() * 900) + 100}`;
+        const role = isAuraAdmin ? 'admin' : 'user';
+        const finalUsername = isAuraAdmin ? 'aura_admin' : `${user.displayName?.toLowerCase().replace(/\s+/g, '') || 'fb_peer'}_${Math.floor(Math.random() * 900) + 100}`;
         const avatar = user.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.uid}`;
         
         await saveUserProfile(user.uid, {
           uid: user.uid,
           username: finalUsername,
-          displayName: user.displayName || (isBiosStyles ? 'Bios Styles' : finalUsername),
+          displayName: user.displayName || (isAuraAdmin ? 'Aura Admin' : finalUsername),
           email: user.email || '',
-          phoneNumber: user.phoneNumber || (isBiosStyles ? '080 334 05247' : ''),
-          bio: isBiosStyles ? 'Bios Styles Creator Node Account. Full control protocol enabled.' : 'Off-grid decentralized mesh node.',
+          phoneNumber: user.phoneNumber || '',
+          bio: isAuraAdmin ? 'Aura Admin Account. Full control protocol enabled.' : 'Off-grid decentralized mesh node.',
           avatar: avatar,
           coverPhoto: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=60',
           website: '',
-          location: isBiosStyles ? 'Lagos, Nigeria' : 'Swarm Coordinates',
+          location: isAuraAdmin ? 'System Core' : 'Swarm Coordinates',
           isVerified: true,
           role: role,
           status: 'active',
@@ -257,11 +253,11 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
     setLoading(true);
     setError(null);
     try {
-      const simUid = 'fb_bios_styles_node_08033405247';
-      const simUsername = 'bios_styles';
-      const simDisplayName = 'Bios Styles';
-      const simPhoneNumber = '080 334 05247';
-      const simEmail = 'biosstyles@facebook.com';
+      const simUid = 'fb_aura_admin_node_0000';
+      const simUsername = 'aura_admin';
+      const simDisplayName = 'Aura Admin';
+      const simPhoneNumber = '';
+      const simEmail = 'admin@aura.net';
       const avatar = `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=60`;
       
       await saveUserProfile(simUid, {
@@ -270,11 +266,11 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
         displayName: simDisplayName,
         email: simEmail,
         phoneNumber: simPhoneNumber,
-        bio: 'Bios Styles Creator Node Account. Full control protocol enabled.',
+        bio: 'Aura Admin Account. Full control protocol enabled.',
         avatar: avatar,
         coverPhoto: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=60',
         website: '',
-        location: 'Lagos, Nigeria',
+        location: 'System Core',
         isVerified: true,
         role: 'admin',
         status: 'active',
@@ -343,7 +339,7 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
 
     const cleanPhone = phoneNumberInput.replace(/[^0-9+]/g, '');
     if (!cleanPhone || cleanPhone.length < 7) {
-      setError('Please enter a valid phone number with country code (e.g. +2348033405247 or 09114900763).');
+      setError('Please enter a valid phone number with country code (e.g. +1 555 019 2831).');
       setLoading(false);
       return;
     }
@@ -384,13 +380,10 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
 
     try {
       const cleanPhone = otpSentPhone.replace(/[^0-9]/g, '');
-      const isCreatorPhone = cleanPhone.includes('08033405247') || 
-                             cleanPhone.includes('09114900763') || 
-                             cleanPhone.includes('2519114900763') || 
-                             cleanPhone.includes('9114900763');
+      const isCreatorPhone = cleanPhone === '08000000000' || cleanPhone.endsWith('0000000');
 
-      const simUid = isCreatorPhone ? `fb_bios_styles_node_${cleanPhone || '09114900763'}` : `aura_phone_${cleanPhone}`;
-      const simUsername = isCreatorPhone ? 'bios_styles' : `user_${cleanPhone.slice(-4)}`;
+      const simUid = isCreatorPhone ? `aura_admin_node_${cleanPhone || '0000'}` : `aura_phone_${cleanPhone}`;
+      const simUsername = isCreatorPhone ? 'aura_admin' : `user_${cleanPhone.slice(-4)}`;
       const simDisplayName = displayNameInput.trim() || (isCreatorPhone ? 'Aura Creator' : `Aura User (${cleanPhone.slice(-4)})`);
       const simEmail = email.trim() || (isCreatorPhone ? 'creator@aura.app' : `user_${cleanPhone}@aura.app`);
       const avatar = isCreatorPhone 
@@ -546,11 +539,10 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                   maxLength={6}
                   value={otpCodeInput}
                   onChange={e => setOtpCodeInput(e.target.value)}
-                  placeholder="e.g. 123456"
+                  placeholder="Enter 6-digit code"
                   className="w-full bg-slate-950 border border-cyan-900/60 focus:border-cyan-400 rounded-lg py-2.5 pl-10 pr-4 text-sm text-cyan-300 placeholder-slate-600 focus:outline-none font-mono tracking-widest text-center"
                 />
               </div>
-              <p className="text-[10px] text-slate-500 font-mono mt-1">Hint: Use the code shown above or type <strong>123456</strong> for instant bypass.</p>
             </div>
 
             <div className="space-y-2">
@@ -584,7 +576,7 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                   required
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  placeholder="node@omnisphere.net"
+                  placeholder="node@aura.net"
                   className="w-full bg-slate-950 border border-slate-900 focus:border-cyan-500 rounded-lg py-2.5 pl-10 pr-4 text-xs text-slate-200 placeholder-slate-600 focus:outline-none font-mono"
                 />
               </div>
@@ -600,7 +592,7 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                   type="text"
                   value={loginCustomName}
                   onChange={e => setLoginCustomName(e.target.value)}
-                  placeholder="e.g. Princewill Geleteye"
+                  placeholder="Full Name"
                   className="w-full bg-slate-950 border border-cyan-900/60 focus:border-cyan-400 rounded-lg py-2.5 pl-10 pr-4 text-xs text-cyan-200 placeholder-slate-600 focus:outline-none font-mono"
                 />
               </div>
@@ -677,14 +669,14 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
               className="w-full py-2.5 bg-slate-950 hover:bg-emerald-950/30 border border-emerald-900/40 rounded-lg text-xs text-emerald-300 font-mono transition flex items-center justify-center gap-2 shadow mb-2"
             >
               <Phone className="w-4 h-4 text-emerald-400" />
-              {showPhoneLogin ? "Hide Phone Access" : "Phone Number Login (09 11 4900 763)"}
+              {showPhoneLogin ? "Hide Phone Access" : "Phone Number Login"}
             </button>
 
             {showPhoneLogin && (
               <form onSubmit={handlePhoneSignInSubmit} className="bg-emerald-950/20 border border-emerald-500/30 p-3.5 rounded-xl space-y-2.5 my-2 animate-fadeIn">
                 <div className="flex items-center justify-between text-[10px] font-mono text-emerald-400">
-                  <span>Enter Phone Number for Creator / Peer Access</span>
-                  <span className="text-emerald-400 font-bold">Authorized Creator: 09 11 4900 763</span>
+                  <span>Enter Phone Number for Peer Access</span>
+                  <span className="text-emerald-400 font-bold">Aura Phone Network</span>
                 </div>
                 <div className="relative">
                   <Phone className="absolute left-3 top-2.5 w-4 h-4 text-emerald-500" />
@@ -692,7 +684,7 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                     type="tel"
                     value={phoneNumberInput}
                     onChange={(e) => setPhoneNumberInput(e.target.value)}
-                    placeholder="e.g. 09 11 4900 763 or 08033405247"
+                    placeholder="Phone Number (+country code)"
                     className="w-full bg-slate-950 border border-emerald-900/60 focus:border-emerald-400 text-xs text-emerald-300 font-mono rounded-lg py-2 pl-9 pr-3 focus:outline-none"
                     required
                   />
@@ -714,7 +706,7 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
               className="w-full py-2.5 bg-gradient-to-r from-blue-950/40 to-indigo-950/40 hover:from-blue-900/40 hover:to-indigo-900/40 border border-blue-900/40 rounded-lg text-[11px] text-blue-300 font-mono transition flex items-center justify-center gap-2 shadow"
             >
               <Facebook className="w-4 h-4 text-cyan-400 shrink-0" />
-              Bypass: Facebook (Bios Styles Creator)
+              Bypass: Admin Identity Checkpoint
             </button>
 
             <p className="text-center text-[10px] text-slate-500 font-mono mt-4">
@@ -752,7 +744,7 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                   required
                   value={phoneNumberInput}
                   onChange={e => setPhoneNumberInput(e.target.value)}
-                  placeholder="e.g. +2348033405247 or 09114900763"
+                  placeholder="Phone Number (+country code)"
                   className="w-full bg-slate-950 border border-slate-900 focus:border-cyan-500 rounded-lg py-2.5 pl-10 pr-4 text-xs text-slate-200 placeholder-slate-600 focus:outline-none font-mono"
                 />
               </div>
@@ -767,7 +759,7 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                   required
                   value={displayNameInput}
                   onChange={e => setDisplayNameInput(e.target.value)}
-                  placeholder="e.g. Princewill Geleteye"
+                  placeholder="Display Name"
                   className="w-full bg-slate-950 border border-slate-900 focus:border-cyan-500 rounded-lg py-2.5 pl-10 pr-4 text-xs text-slate-200 placeholder-slate-600 focus:outline-none font-mono"
                 />
               </div>
@@ -872,7 +864,7 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                       required
                       value={recoveryPhoneInput}
                       onChange={e => setRecoveryPhoneInput(e.target.value)}
-                      placeholder="e.g. +2348033405247 or 09114900763"
+                      placeholder="Recovery Phone Number"
                       className="w-full bg-slate-950 border border-slate-900 focus:border-cyan-500 rounded-lg py-2.5 pl-10 pr-4 text-xs text-cyan-300 font-mono placeholder-slate-600 focus:outline-none"
                     />
                   </div>
@@ -906,7 +898,7 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                 className="space-y-3"
               >
                 <p className="text-[11px] text-slate-400 font-mono leading-relaxed">
-                  Enter your 16-character Secondary Master Recovery Key (e.g. <span className="text-cyan-300 font-bold">AURA-SEC-XXXX-XXXX</span>) to bypass password checks and recover account access immediately.
+                  Enter your 16-character Secondary Master Recovery Key to bypass password checks and recover account access immediately.
                 </p>
 
                 <div className="space-y-1">
@@ -947,7 +939,7 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                       required
                       value={email}
                       onChange={e => setEmail(e.target.value)}
-                      placeholder="node@omnisphere.net"
+                      placeholder="node@aura.net"
                       className="w-full bg-slate-950 border border-slate-900 focus:border-cyan-500 rounded-lg py-2.5 pl-10 pr-4 text-xs text-slate-200 placeholder-slate-600 focus:outline-none font-mono"
                     />
                   </div>

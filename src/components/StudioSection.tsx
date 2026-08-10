@@ -387,7 +387,7 @@ export default function StudioSection({
                       type="text"
                       value={charName}
                       onChange={(e) => setCharName(e.target.value)}
-                      placeholder="e.g., Lyra Vesper"
+                      placeholder="Character Name"
                       className="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
                       required
                     />
@@ -419,7 +419,7 @@ export default function StudioSection({
                       type="text"
                       value={charPhysical}
                       onChange={(e) => setCharPhysical(e.target.value)}
-                      placeholder="e.g., Midnight leather jacket, cyan holographic wrist array."
+                      placeholder="Physical description"
                       className="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
                     />
                   </div>
@@ -429,7 +429,7 @@ export default function StudioSection({
                       type="text"
                       value={charPersonality}
                       onChange={(e) => setCharPersonality(e.target.value)}
-                      placeholder="e.g., Cynical, fiercely loyal, hyper-logical under pressure."
+                      placeholder="Personality traits"
                       className="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
                     />
                   </div>
@@ -440,7 +440,7 @@ export default function StudioSection({
                   <textarea
                     value={charBio}
                     onChange={(e) => setCharBio(e.target.value)}
-                    placeholder="Short bio explaining their origin, status on the network, and story arc..."
+                    placeholder="Short bio explaining origin and story arc..."
                     className="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-sans"
                     rows={3}
                   />
@@ -452,7 +452,7 @@ export default function StudioSection({
                     type="text"
                     value={charMotivations}
                     onChange={(e) => setCharMotivations(e.target.value)}
-                    placeholder="e.g., Seeks to decentralize the local municipal power ledger..."
+                    placeholder="Internal motivations"
                     className="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
                   />
                 </div>

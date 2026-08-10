@@ -139,7 +139,7 @@ export default function SettingsModal({
 
 
   const isLight = theme === 'light';
-  const isAppCreator = isAppCreatorProp || (currentUserEmail && currentUserEmail.toLowerCase() === 'geleteyeprincewill72@gmail.com');
+  const isAppCreator = isAppCreatorProp || (currentUserEmail && currentUserEmail.toLowerCase().includes('admin@aura.net'));
 
   const [showDeviceSecurityModal, setShowDeviceSecurityModal] = useState(false);
   const realLoginsCount = localStorage.getItem('aura_real_logins_total') || '143';
@@ -220,13 +220,13 @@ export default function SettingsModal({
           {/* Custom Status Input & Quick Select Presets */}
           <div className="space-y-2 pt-1">
             <label className={`text-[10px] uppercase font-mono block ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-              Custom Profile Status (e.g. Offline, Deep Work, Open to Networking)
+              Custom Profile Status
             </label>
             <input
               type="text"
               value={profileStatus}
               onChange={(e) => setProfileStatus(e.target.value)}
-              placeholder="Set your presence status (e.g., Deep Work, Offline, Open to Networking)..."
+              placeholder="Set your presence status..."
               className={`w-full border rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
                 isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950 border-slate-800 text-slate-200'
               }`}
@@ -543,9 +543,9 @@ export default function SettingsModal({
                   <input
                     type="text"
                     name="adminPhone"
-                    defaultValue={paymentConfig.adminPhoneNumber || '09 11 4900 763'}
+                    defaultValue={paymentConfig.adminPhoneNumber || ''}
                     className="w-full bg-slate-900 border border-slate-800 text-xs text-emerald-400 font-mono rounded p-2 focus:outline-none focus:border-emerald-500"
-                    placeholder="e.g. 09 11 4900 763"
+                    placeholder="Enter Phone Number"
                     required
                   />
                   <span className="text-[8px] text-slate-500 font-mono mt-0.5 block">

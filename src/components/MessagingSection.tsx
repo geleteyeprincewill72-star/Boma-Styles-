@@ -1069,7 +1069,7 @@ export default function MessagingSection({
                 <label className="text-[9px] font-mono text-slate-500 uppercase tracking-widest block mb-1">Circle Name / Label</label>
                 <input
                   type="text"
-                  placeholder="e.g. Scifi Draft Crew"
+                  placeholder="Circle Name"
                   value={newChatName}
                   onChange={e => setNewChatName(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-900 focus:border-cyan-500 rounded-lg py-2 px-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none font-mono"

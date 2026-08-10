@@ -12,7 +12,8 @@ import {
   Award, 
   Sliders, 
   Table, 
-  Grid 
+  Grid,
+  Info
 } from 'lucide-react';
 import { SubscriptionPlan, getSubscriptionPlans } from '../utils/monetization';
 
@@ -170,9 +171,39 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                 {/* PLAN TITLE & BADGE */}
                 <div className="space-y-2 pt-1">
                   <div className="flex items-center justify-between">
-                    <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded uppercase tracking-wider ${plan.badgeColor}`}>
-                      {plan.badge}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded uppercase tracking-wider ${plan.badgeColor}`}>
+                        {plan.badge}
+                      </span>
+                      {(isPremium || isSuperstar || isPro) && (
+                        <div className="relative group/tooltip inline-block cursor-help z-20">
+                          <Info className="w-3.5 h-3.5 text-amber-400 hover:text-amber-300 transition" />
+                          <div className="absolute left-0 top-full mt-2 w-64 bg-slate-950 border border-amber-500/50 rounded-xl p-3 shadow-2xl opacity-0 group-hover/tooltip:opacity-100 transition-all duration-200 pointer-events-none group-hover/tooltip:pointer-events-auto text-left font-sans space-y-2 z-50">
+                            <div className="flex items-center justify-between border-b border-amber-900/50 pb-1 font-mono text-[9px] text-amber-400 font-bold uppercase">
+                              <span className="flex items-center gap-1"><Crown className="w-3 h-3 text-amber-400" /> Tier Technical Advantages</span>
+                            </div>
+                            <ul className="space-y-1.5 text-[10px] text-slate-300 font-sans">
+                              <li className="flex items-start gap-1.5">
+                                <span className="text-amber-400 font-bold font-mono">⚡</span>
+                                <span><strong>Zero-Queue AI Acceleration:</strong> Priority execution with zero queue latency.</span>
+                              </li>
+                              <li className="flex items-start gap-1.5">
+                                <span className="text-cyan-400 font-bold font-mono">🔒</span>
+                                <span><strong>50GB Offline Edge Storage:</strong> High-speed cloud & offline storage index.</span>
+                              </li>
+                              <li className="flex items-start gap-1.5">
+                                <span className="text-emerald-400 font-bold font-mono">🚫</span>
+                                <span><strong>100% Ad-Free:</strong> Complete exemption from banner and interstitial ad units.</span>
+                              </li>
+                              <li className="flex items-start gap-1.5">
+                                <span className="text-fuchsia-400 font-bold font-mono">👑</span>
+                                <span><strong>Sovereign W3C Badges:</strong> Verified cryptographic badge across mesh nodes.</span>
+                              </li>
+                            </ul>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                     {isSuperstar && <Sparkles className="w-4 h-4 text-fuchsia-400 animate-pulse" />}
                     {isPremium && <Crown className="w-4 h-4 text-amber-400" />}
                   </div>
