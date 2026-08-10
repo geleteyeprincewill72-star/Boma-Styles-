@@ -60,6 +60,11 @@ import { AdsterraGlobalScripts } from './components/AdsterraAd';
 import VideoHubSection from './components/VideoHubSection';
 import VideoTheaterSection from './components/VideoTheaterSection';
 import { OmniMindSection } from './components/OmniMindSection';
+import HomeScreen from './components/HomeScreen';
+import CallsSection from './components/CallsSection';
+import FriendsSection from './components/FriendsSection';
+import ProfileSection from './components/ProfileSection';
+import NavigationSidebar from './components/NavigationSidebar';
 import { Language, TRANSLATIONS } from './utils/translations';
 import { logOnDeviceInteraction } from './utils/discoveryEngine';
 import {
@@ -216,7 +221,7 @@ const INITIAL_NODES: NetworkNode[] = [
 ];
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'feed' | 'omnimind' | 'wallet' | 'reviews' | 'studio' | 'network' | 'settings' | 'messages' | 'notifications' | 'admin' | 'discovery' | 'monetization' | 'videos'>('messages');
+  const [activeTab, setActiveTab] = useState<'home' | 'messages' | 'friends' | 'calls' | 'omnimind' | 'feed' | 'videos' | 'notifications' | 'profile' | 'settings' | 'wallet' | 'monetization' | 'reviews' | 'studio' | 'network' | 'admin' | 'discovery'>('home');
   const [username, setUsername] = useState('AnonPeer_402');
   const [avatar, setAvatar] = useState('https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=60');
   const [userStatus, setUserStatus] = useState<string>(() => {
@@ -1166,282 +1171,69 @@ export default function App() {
       {/* Main Dashboard Layout */}
       <div className="flex-grow max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 md:grid-cols-12 gap-6">
         
-        {/* LEFT RAIL NAVIGATION (3 Columns) */}
-        <nav className="md:col-span-3 space-y-6" id="navigation-rail">
-          {/* Main Tabs */}
-          <div className={`border rounded-xl p-3 space-y-1 ${
-            isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#0A0F1D] border-slate-900'
-          }`}>
-            <span className="text-[10px] uppercase font-mono text-slate-500 tracking-wider block px-3 py-1">Protocol Modules</span>
-            
-            {/* Global Access Link Panel (Only Creator/Admin View) */}
-            {isAppCreator && (
-              <div className={`p-2.5 rounded-lg border my-2 space-y-1.5 font-mono text-xs ${
-                isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/40 border-slate-900'
-              }`}>
-                <div className="flex items-center justify-between">
-                  <span className="text-[9px] uppercase font-bold text-cyan-500">Access Node Invite</span>
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-950/20 text-cyan-400 font-bold border border-cyan-500/10 uppercase">
-                    Active
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    readOnly
-                    value="https://ais-pre-n2zmwj5vdlaktpo2rdwo2v-119193402769.europe-west1.run.app"
-                    className={`w-full text-[10px] p-2 rounded border focus:outline-none select-all ${
-                      isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-slate-900/60 border-slate-800/80 text-slate-300'
-                    }`}
-                    onClick={(e) => (e.target as HTMLInputElement).select()}
-                  />
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText("https://ais-pre-n2zmwj5vdlaktpo2rdwo2v-119193402769.europe-west1.run.app");
-                      alert("Direct access node invite link has been copied to clipboard!");
-                    }}
-                    className="px-2.5 py-2 bg-gradient-to-r from-cyan-600 to-violet-600 hover:from-cyan-500 hover:to-violet-500 text-white rounded-md text-[10px] font-bold uppercase tracking-wider transition shrink-0 shadow-sm"
-                    title="Copy Link"
-                  >
-                    Copy
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Primary Messaging & Communication Platform Controls */}
-            <button
-              onClick={() => setActiveTab('messages')}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-mono transition text-left group ${
-                activeTab === 'messages' 
-                  ? isLight ? 'bg-slate-100 text-cyan-600 border border-slate-200/80 shadow' : 'bg-slate-900 text-cyan-400 border border-slate-800/80 shadow' 
-                  : isLight ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/50' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/40'
-              }`}
-              id="sidebar-messages-btn"
-            >
-              <span className="flex items-center gap-2 font-bold">
-                <Inbox className="w-4 h-4 text-emerald-400" />
-                {t('messagesTab')}
-              </span>
-              <ChevronRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-400 transition" />
-            </button>
-
-            <button
-              onClick={() => setActiveTab('omnimind')}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-mono transition text-left group ${
-                activeTab === 'omnimind' 
-                  ? isLight ? 'bg-slate-100 text-violet-600 border border-slate-200/80 shadow' : 'bg-slate-900 text-violet-400 border border-slate-800/80 shadow' 
-                  : isLight ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/50' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/40'
-              }`}
-              id="sidebar-omnimind-btn"
-            >
-              <span className="flex items-center gap-2">
-                <BrainCircuit className="w-4 h-4 text-violet-400 animate-pulse" />
-                OmniMind AI Assistant
-              </span>
-              <ChevronRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-400 transition" />
-            </button>
-
-            <button
-              onClick={() => setActiveTab('network')}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-mono transition text-left group ${
-                activeTab === 'network' 
-                  ? isLight ? 'bg-slate-100 text-cyan-600 border border-slate-200/80 shadow' : 'bg-slate-900 text-cyan-400 border border-slate-800/80 shadow' 
-                  : isLight ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/50' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/40'
-              }`}
-            >
-              <span className="flex items-center gap-2">
-                <Network className="w-4 h-4 text-cyan-500" />
-                Phone & Peer Contacts
-              </span>
-              <ChevronRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-400 transition" />
-            </button>
-
-            <button
-              onClick={() => setActiveTab('wallet')}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-mono transition text-left group ${
-                activeTab === 'wallet' 
-                  ? isLight ? 'bg-slate-100 text-cyan-600 border border-slate-200/80 shadow' : 'bg-slate-900 text-cyan-400 border border-slate-800/80 shadow' 
-                  : isLight ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/50' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/40'
-              }`}
-            >
-              <span className="flex items-center gap-2">
-                <Wallet className="w-4 h-4 text-emerald-400" />
-                {t('walletTab')}
-              </span>
-              <ChevronRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-400 transition" />
-            </button>
-
-            <button
-              onClick={() => setActiveTab('videos')}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-mono transition text-left group ${
-                activeTab === 'videos' 
-                  ? isLight ? 'bg-slate-100 text-pink-600 border border-slate-200/80 shadow' : 'bg-slate-900 text-pink-400 border border-slate-800/80 shadow' 
-                  : isLight ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/50' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/40'
-              }`}
-              id="sidebar-videos-btn"
-            >
-              <span className="flex items-center gap-2">
-                <Video className="w-4 h-4 text-pink-400 animate-pulse" />
-                Video Media Hub
-              </span>
-              <ChevronRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-400 transition" />
-            </button>
-
-            <button
-              onClick={() => setActiveTab('reviews')}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-mono transition text-left group ${
-                activeTab === 'reviews' 
-                  ? isLight ? 'bg-slate-100 text-cyan-600 border border-slate-200/80 shadow' : 'bg-slate-900 text-cyan-400 border border-slate-800/80 shadow' 
-                  : isLight ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/50' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/40'
-              }`}
-            >
-              <span className="flex items-center gap-2">
-                <MessageSquareCode className="w-4 h-4 text-violet-400" />
-                {t('reviewsTab')}
-              </span>
-              <ChevronRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-400 transition" />
-            </button>
-
-            <button
-              onClick={() => setActiveTab('settings')}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-mono transition text-left group ${
-                activeTab === 'settings' 
-                  ? isLight ? 'bg-slate-100 text-cyan-600 border border-slate-200/80 shadow' : 'bg-slate-900 text-cyan-400 border border-slate-800/80 shadow' 
-                  : isLight ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/50' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/40'
-              }`}
-            >
-              <span className="flex items-center gap-2">
-                <Settings className="w-4 h-4 text-amber-400" />
-                {t('settingsTab')}
-              </span>
-              <ChevronRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-400 transition" />
-            </button>
-
-            {isAppCreator && (
-              <button
-                onClick={() => setActiveTab('monetization')}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-mono transition text-left group ${
-                  activeTab === 'monetization' 
-                    ? isLight ? 'bg-slate-100 text-cyan-600 border border-slate-200/80 shadow' : 'bg-slate-900 text-cyan-400 border border-slate-800/80 shadow' 
-                    : isLight ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/50' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/40'
-                }`}
-                id="sidebar-monetization-btn"
-              >
-                <span className="flex items-center gap-2">
-                  <Award className="w-4 h-4 text-cyan-400" />
-                  {t('monetizationTab')}
-                </span>
-                <ChevronRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-400 transition" />
-              </button>
-            )}
-
-            <button
-              onClick={() => setActiveTab('messages')}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-mono transition text-left group ${
-                activeTab === 'messages' 
-                  ? isLight ? 'bg-slate-100 text-cyan-600 border border-slate-200/80 shadow' : 'bg-slate-900 text-cyan-400 border border-slate-800/80 shadow' 
-                  : isLight ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/50' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/40'
-              }`}
-              id="sidebar-messages-btn"
-            >
-              <span className="flex items-center gap-2">
-                <Inbox className="w-4 h-4 text-emerald-400" />
-                {t('messagesTab')}
-              </span>
-              <ChevronRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-400 transition" />
-            </button>
-
-            <button
-              onClick={() => setActiveTab('notifications')}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-mono transition text-left group ${
-                activeTab === 'notifications' 
-                  ? isLight ? 'bg-slate-100 text-cyan-600 border border-slate-200/80 shadow' : 'bg-slate-900 text-cyan-400 border border-slate-800/80 shadow' 
-                  : isLight ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/50' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/40'
-              }`}
-              id="sidebar-notifications-btn"
-            >
-              <span className="flex items-center gap-2">
-                <Bell className="w-4 h-4 text-cyan-400 animate-pulse" />
-                {t('notificationsTab')}
-              </span>
-              {unreadNotifCount > 0 && (
-                <span className="text-[9px] bg-cyan-500 text-slate-950 font-black px-1.5 py-0.5 rounded-full font-mono scale-90" id="notif-badge-count">
-                  {unreadNotifCount}
-                </span>
-              )}
-            </button>
-
-            {userProfile?.role === 'admin' && (
-              <button
-                onClick={() => setActiveTab('admin')}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-mono transition text-left group ${
-                  activeTab === 'admin' 
-                    ? 'bg-red-950/20 text-red-400 border border-red-900/40 shadow' 
-                    : isLight ? 'text-slate-600 hover:text-red-600 hover:bg-red-50' : 'text-slate-400 hover:text-red-400 hover:bg-red-950/10'
-                }`}
-                id="sidebar-admin-btn"
-              >
-                <span className="flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-red-500" />
-                  {t('adminTab')}
-                </span>
-                <ChevronRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-red-400 transition" />
-              </button>
-            )}
-
-            <div className={`border-t my-2 pt-2 ${isLight ? 'border-slate-100' : 'border-slate-900/60'}`}>
-              <button
-                onClick={handleInstallPWA}
-                className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-mono transition text-left group bg-cyan-950/25 text-cyan-400 border border-cyan-800/30 hover:bg-cyan-900/40 shadow-sm"
-                id="sidebar-pwa-install-btn"
-              >
-                <span className="flex items-center gap-2">
-                  <ArrowDownToLine className="w-4 h-4 text-cyan-400 animate-bounce" />
-                  Install App (PWA-Free)
-                </span>
-                <ChevronRight className="w-3.5 h-3.5 text-cyan-500 group-hover:text-cyan-300 transition" />
-              </button>
-            </div>
-
-            <div className={`border-t my-2 pt-2 ${isLight ? 'border-slate-100' : 'border-slate-900/60'}`}>
-              <button
-                onClick={handleLogOut}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-mono transition text-left text-red-500 hover:text-red-400 group ${
-                  isLight ? 'hover:bg-red-50' : 'hover:bg-red-950/10'
-                }`}
-                id="sidebar-logout-btn"
-              >
-                <span className="flex items-center gap-2">
-                  <LogOut className="w-4 h-4 text-red-500" />
-                  {t('disconnectBtn')}
-                </span>
-                <ChevronRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-red-400 transition" />
-              </button>
-            </div>
-          </div>
-
-          {/* Privacy Integrity Manifesto details */}
-          <div className={`border rounded-xl p-5 space-y-4 shadow-sm hidden md:block ${
-            isLight ? 'bg-white border-slate-200 text-slate-700' : 'bg-[#0A0F1D] border-slate-900'
-          }`}>
-            <h4 className={`text-xs font-bold font-sans uppercase tracking-wide ${isLight ? 'text-slate-800' : 'text-slate-300'}`}>
-              {t('directiveTitle')}
-            </h4>
-            <p className={`text-xs leading-relaxed font-sans ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
-              {t('directiveDesc')}
-            </p>
-            <div className={`flex items-center gap-1.5 pt-1.5 border-t ${isLight ? 'border-slate-100' : 'border-slate-850'}`}>
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-              <span className="text-[9px] font-mono text-slate-500 uppercase tracking-widest">
-                {t('liveClient')}
-              </span>
-            </div>
-          </div>
-        </nav>
+        {/* NAVIGATION SIDEBAR & MOBILE MENU */}
+        <NavigationSidebar
+          activeTab={activeTab}
+          setActiveTab={(tab) => setActiveTab(tab as any)}
+          unreadNotifCount={unreadNotifCount}
+          username={username}
+          avatar={avatar}
+          userStatus={userStatus}
+          isAppCreator={isAppCreator}
+          isAdmin={userProfile?.role === 'admin'}
+          onLogout={handleLogOut}
+          theme={theme}
+        />
 
         {/* RIGHT HAND VIEW CONTENT AREA (9 Columns) */}
         <main className="md:col-span-9" id="main-content-view">
+          {activeTab === 'home' && (
+            <HomeScreen
+              username={username}
+              avatar={avatar}
+              posts={posts}
+              onNavigateTab={(tab) => setActiveTab(tab as any)}
+              onAddPost={handleAddPost}
+              theme={theme}
+              isPremium={isPremium}
+            />
+          )}
+
+          {activeTab === 'calls' && (
+            <CallsSection
+              currentUserName={username}
+              currentUserAvatar={avatar}
+              theme={theme}
+            />
+          )}
+
+          {activeTab === 'friends' && (
+            <FriendsSection
+              currentUserId={currentUser?.uid}
+              currentUserName={username}
+              currentUserAvatar={avatar}
+              onOpenChatWithUser={(userId, _userName) => {
+                setActiveTab('messages');
+              }}
+              onNavigateTab={(tab) => setActiveTab(tab as any)}
+              theme={theme}
+            />
+          )}
+
+          {activeTab === 'profile' && keys && (
+            <ProfileSection
+              username={username}
+              avatar={avatar}
+              userStatus={userStatus}
+              myPublicKey={keys.publicKey}
+              userEmail={currentUser?.email || ''}
+              posts={posts}
+              onOpenSettings={() => setActiveTab('settings')}
+              onNavigateTab={(tab) => setActiveTab(tab as any)}
+              theme={theme}
+            />
+          )}
+
           {activeTab === 'feed' && keys && (
             <div className="space-y-6">
               {/* Creator-only monetization control panel (Only visible to the creator) */}

@@ -1581,14 +1581,10 @@ export default function FeedSection({
 
                   {!isPremium && (idx + 1) % 4 === 0 && (
                     <div className="my-6">
-                      {idx % 8 === 0 ? (
-                        <AdsterraAd unit="medium_rectangle_250" theme={theme} />
-                      ) : (
-                        <GoogleAdSenseAd 
-                          format="horizontal" 
-                          theme={theme} 
-                        />
-                      )}
+                      <GoogleAdSenseAd 
+                        format={idx % 8 === 0 ? 'rectangle' : 'horizontal'} 
+                        theme={theme} 
+                      />
                     </div>
                   )}
                 </React.Fragment>

@@ -1046,10 +1046,33 @@ export default function VideoTheaterSection({
             </div>
           </div>
 
-          {/* Adsterra Sponsor Banner Sidebar Placement */}
+          {/* Sponsored Ad Banner Sidebar Placement */}
           {!isPremium && (
-            <div className="bg-[#0A0F1D] border border-slate-900 rounded-2xl p-3 flex flex-col items-center justify-center">
-              <AdsterraAd unit="medium_rectangle_250" theme={theme} />
+            <div className="bg-[#0A0F1D] border border-slate-900 rounded-2xl p-4 space-y-3 text-center">
+              <span className="text-[9px] font-mono text-slate-500 block uppercase tracking-widest">
+                Google AdSense Web Banner Display Unit
+              </span>
+              <div className="bg-gradient-to-br from-indigo-950/20 to-violet-950/20 border border-violet-800/20 rounded-xl p-3 space-y-2">
+                <div className="flex items-center justify-between text-[10px] font-mono">
+                  <span className="text-violet-400 font-bold bg-violet-950 border border-violet-800 px-1 rounded">SPONSORED AD</span>
+                  <span className="text-slate-500">ca-pub-394...</span>
+                </div>
+                <div className="text-left">
+                  <div className="text-xs font-bold text-slate-200">Aura Pro Unlimited</div>
+                  <p className="text-[10px] text-slate-400 leading-normal font-sans mt-0.5">
+                    Unlock ad-free experience, multi-node replication, and priority bandwidth. Setup in seconds.
+                  </p>
+                </div>
+                <a
+                  href="https://ai.studio/build"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-1.5 bg-violet-600 hover:bg-violet-500 text-slate-100 rounded-lg text-[10px] font-mono font-bold uppercase transition flex items-center justify-center gap-1"
+                >
+                  Learn More
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
             </div>
           )}
 
