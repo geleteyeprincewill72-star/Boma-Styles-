@@ -1,11 +1,10 @@
 {
-  "projectId": "dependable-limiter-p6rpq",
-  "appId": "1:665896043888:web:67b5157985a9fc6b9bbbb5",
-  "apiKey": "AIzaSyDcHOKe4yv9YMdyLJvHMMlpeKSbZgSdh6c",
-  "authDomain": "dependable-limiter-p6rpq.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-omnisphere-60158bb3-5b69-481d-b470-278bbc804700",
-  "storageBucket": "dependable-limiter-p6rpq.firebasestorage.app",
-  "messagingSenderId": "665896043888",
-  "measurementId": "",
-  "oAuthClientId": "665896043888-hc5thi40ju8aosjo9ogov8k3bcsdll7s.apps.googleusercontent.com"
+  "projectId": "aura-8fda0",
+  "appId": "1:956931503441:web:cdbb90bfe42a46fe760f70",
+  "apiKey": "AIzaSyCYLd1aXINPlA-_Gndhj1H1QABlqGiKWPw",
+  "authDomain": "aura-8fda0.firebaseapp.com",
+  "firestoreDatabaseId": "(default)",
+  "storageBucket": "aura-8fda0.firebasestorage.app",
+  "messagingSenderId": "956931503441",
+  "measurementId": "G-BWKL67S8VX"
 }

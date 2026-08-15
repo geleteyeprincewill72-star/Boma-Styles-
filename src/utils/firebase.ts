@@ -33,22 +33,23 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { FeedPost, Character, ScreenplayBlock, Review } from '../types';
 
 const firebaseConfig = {
-  projectId: "dependable-limiter-p6rpq",
-  appId: "1:665896043888:web:67b5157985a9fc6b9bbbb5",
-  apiKey: "AIzaSyDcHOKe4yv9YMdyLJvHMMlpeKSbZgSdh6c",
-  authDomain: "dependable-limiter-p6rpq.firebaseapp.com",
-  firestoreDatabaseId: "ai-studio-omnisphere-60158bb3-5b69-481d-b470-278bbc804700",
-  storageBucket: "dependable-limiter-p6rpq.firebasestorage.app",
-  messagingSenderId: "665896043888",
-  measurementId: "",
-  oAuthClientId: "665896043888-hc5thi40ju8aosjo9ogov8k3bcsdll7s.apps.googleusercontent.com"
+  projectId: "aura-8fda0",
+  appId: "1:956931503441:web:cdbb90bfe42a46fe760f70",
+  apiKey: "AIzaSyCYLd1aXINPlA-_Gndhj1H1QABlqGiKWPw",
+  authDomain: "aura-8fda0.firebaseapp.com",
+  firestoreDatabaseId: "(default)",
+  storageBucket: "aura-8fda0.firebasestorage.app",
+  messagingSenderId: "956931503441",
+  measurementId: "G-BWKL67S8VX"
 };
 
 // Initialize Firebase App
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firestore targeting our custom Database ID
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+// Initialize Firestore targeting default or custom Database ID
+export const db = (firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== "(default)")
+  ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
+  : getFirestore(app);
 
 // Initialize Authentication
 export const auth = getAuth(app);
@@ -82,7 +83,7 @@ export async function testConnection() {
     console.log("Firebase Connection verified successfully.");
   } catch (error) {
     if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration. Client appears offline.");
+      console.warn("Firestore client connection pending or offline. Local cache active.");
     } else {
       console.log("Firebase Server Connection verification completed.");
     }
@@ -118,8 +119,15 @@ export interface FirestoreErrorInfo {
 }
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errMsg = error instanceof Error ? error.message : String(error);
+  const isOfflineOrConnecting = 
+    errMsg.toLowerCase().includes('offline') || 
+    errMsg.toLowerCase().includes('unavailable') || 
+    errMsg.toLowerCase().includes('network') ||
+    errMsg.toLowerCase().includes('failed to get document because the client is offline');
+
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: errMsg,
     authInfo: {
       userId: auth.currentUser?.uid,
       email: auth.currentUser?.email,
@@ -134,6 +142,12 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     operationType,
     path
   };
+
+  if (isOfflineOrConnecting) {
+    console.warn('Firestore offline / network pending:', JSON.stringify(errInfo));
+    return;
+  }
+
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }
@@ -287,6 +301,22 @@ export interface UserProfile {
 
 export async function saveUserProfile(uid: string, profile: Partial<UserProfile>): Promise<void> {
   const path = `users/${uid}`;
+  const localKey = `aura_user_profile_${uid}`;
+  
+  // Update local cache immediately for zero-latency UI
+  try {
+    const raw = localStorage.getItem(localKey);
+    const existing = raw ? JSON.parse(raw) : {};
+    const merged = {
+      uid,
+      status: 'active',
+      role: 'user',
+      ...existing,
+      ...profile
+    };
+    localStorage.setItem(localKey, JSON.stringify(merged));
+  } catch (_) {}
+
   try {
     await setDoc(doc(db, 'users', uid), {
       uid,
@@ -294,22 +324,53 @@ export async function saveUserProfile(uid: string, profile: Partial<UserProfile>
       role: 'user',
       ...profile
     }, { merge: true });
-  } catch (err) {
+  } catch (err: any) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    if (errMsg.toLowerCase().includes('offline') || errMsg.toLowerCase().includes('unavailable')) {
+      console.warn("Firestore offline: Profile saved to local cache and will sync automatically.");
+      return;
+    }
     handleFirestoreError(err, OperationType.WRITE, path);
   }
 }
 
 export async function fetchUserProfile(uid: string): Promise<UserProfile | null> {
   const path = `users/${uid}`;
+  const localKey = `aura_user_profile_${uid}`;
+  
+  // 1. Read from local cache first
+  let cached: UserProfile | null = null;
+  try {
+    const raw = localStorage.getItem(localKey);
+    if (raw) {
+      cached = JSON.parse(raw);
+    }
+  } catch (_) {}
+
+  // 2. Fetch latest from Firestore with graceful fallback
   try {
     const docSnap = await getDoc(doc(db, 'users', uid));
     if (docSnap.exists()) {
-      return docSnap.data() as UserProfile;
+      const liveData = docSnap.data() as UserProfile;
+      try {
+        localStorage.setItem(localKey, JSON.stringify(liveData));
+      } catch (_) {}
+      return liveData;
     }
-    return null;
-  } catch (err) {
+    return cached;
+  } catch (err: any) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    if (
+      errMsg.toLowerCase().includes('offline') || 
+      errMsg.toLowerCase().includes('unavailable') ||
+      errMsg.toLowerCase().includes('network') ||
+      errMsg.toLowerCase().includes('failed to get document')
+    ) {
+      console.warn("Firestore client is offline or connecting; using cached user profile if available.");
+      return cached;
+    }
     handleFirestoreError(err, OperationType.GET, path);
-    return null;
+    return cached;
   }
 }
 
@@ -319,9 +380,13 @@ export async function checkUsernameUnique(username: string): Promise<boolean> {
     const q = query(collection(db, path), where('username', '==', username.trim().toLowerCase()));
     const snapshot = await getDocs(q);
     return snapshot.empty;
-  } catch (err) {
+  } catch (err: any) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    if (errMsg.toLowerCase().includes('offline') || errMsg.toLowerCase().includes('unavailable')) {
+      return true;
+    }
     handleFirestoreError(err, OperationType.LIST, path);
-    return false;
+    return true;
   }
 }
 

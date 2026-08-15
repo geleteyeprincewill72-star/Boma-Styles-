@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import UserLocationTracker from './UserLocationTracker';
 import { 
   Users, 
   UserPlus, 
@@ -12,7 +13,10 @@ import {
   UserCheck, 
   Clock, 
   MoreVertical,
-  Key
+  Key,
+  MapPin,
+  Compass,
+  Lock
 } from 'lucide-react';
 import { fetchUsersList, UserProfile } from '../utils/firebase';
 
@@ -78,7 +82,7 @@ export const FriendsSection: React.FC<FriendsSectionProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [friendsList, setFriendsList] = useState(PRESEEDED_FRIENDS);
-  const [activeTab, setActiveTab] = useState<'all' | 'requests' | 'suggestions'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'location_tracker' | 'requests'>('all');
   const [addedFriendUids, setAddedFriendUids] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -126,13 +130,56 @@ export const FriendsSection: React.FC<FriendsSectionProps> = ({
         <div>
           <h2 className="text-xl font-extrabold text-slate-100 font-sans flex items-center gap-2">
             <Users className="w-5 h-5 text-indigo-400" />
-            <span>Friends & Contacts</span>
+            <span>Friends & Peer Location Tracker</span>
           </h2>
           <p className="text-xs text-slate-400 font-mono mt-0.5">
-            Connect and communicate with peers across the Aura network
+            Connect with peers & search private user GPS location coordinates
           </p>
         </div>
 
+        {/* Sub-Tab Navigation Switcher */}
+        <div className="flex bg-slate-950 p-1.5 rounded-2xl border border-slate-800 font-mono text-xs font-bold w-full md:w-auto">
+          <button
+            type="button"
+            onClick={() => setActiveTab('all')}
+            className={`px-4 py-2 rounded-xl transition flex items-center gap-2 ${
+              activeTab === 'all'
+                ? 'bg-indigo-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>All Friends ({friendsList.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('location_tracker')}
+            className={`px-4 py-2 rounded-xl transition flex items-center gap-2 ${
+              activeTab === 'location_tracker'
+                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Compass className="w-3.5 h-3.5 text-cyan-300" />
+            <span>Private User Locator</span>
+            <span className="text-[9px] bg-amber-950 text-amber-300 border border-amber-800 px-1.5 py-0.5 rounded">
+              Encrypted
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {activeTab === 'location_tracker' && (
+        <UserLocationTracker
+          currentUserName={currentUserName}
+          currentUserAvatar={currentUserAvatar}
+          theme={theme}
+        />
+      )}
+
+      {activeTab === 'all' && (
+      <>
         {/* Search Bar */}
         <div className="relative w-full md:w-72">
           <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
@@ -144,7 +191,6 @@ export const FriendsSection: React.FC<FriendsSectionProps> = ({
             className="w-full pl-9 pr-3 py-2 bg-[#0F1526] border border-slate-800 rounded-xl text-xs text-slate-200 font-sans focus:outline-none focus:border-indigo-500"
           />
         </div>
-      </div>
 
       {/* Friends Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -229,6 +275,8 @@ export const FriendsSection: React.FC<FriendsSectionProps> = ({
           );
         })}
       </div>
+      </>
+      )}
     </div>
   );
 };

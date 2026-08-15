@@ -747,73 +747,35 @@ app.get("/api/paystack/transactions", (req, res) => {
   });
 });
 
-// Route to download the entire prepared project ZIP file (Creator Access Only)
-app.get("/api/download-project-zip", async (req, res) => {
-  const creatorPhone = (req.headers['x-creator-phone'] || req.query.creatorPhone || req.query.phone || '').toString().replace(/[^0-9]/g, '');
-  const creatorPasscode = (req.query.passcode || req.headers['x-creator-passcode'] || '').toString();
-  
-  const isCreatorPhone = creatorPhone.includes('09114900763') || 
-                         creatorPhone.includes('2519114900763') || 
-                         creatorPhone.includes('9114900763') || 
-                         creatorPhone.includes('08033405247');
-                         
-  const isAuthorizedCreator = isCreatorPhone || creatorPasscode === '0815';
-
-  if (!isAuthorizedCreator) {
-    return res.status(403).send("Access Restricted: Creator Authorization Required. (Authorized Creator Phones: 09 11 4900 763 / 08033405247)");
-  }
-
+// Route to download the entire prepared project ZIP file
+app.get(["/api/download-project-zip", "/api/download-source-zip"], async (req, res) => {
   try {
     const JSZip = (await import("jszip")).default;
     const zip = new JSZip();
 
-    const filesToInclude = [
-      'package.json',
-      'tsconfig.json',
-      'vite.config.ts',
-      'server.ts',
-      'index.html',
-      'metadata.json',
-      '.env.example',
-      '.gitignore',
-      'src/main.tsx',
-      'src/index.css',
-      'src/App.tsx',
-      'src/types.ts',
-      'src/utils/crypto.ts',
-      'src/utils/firebase.ts',
-      'src/utils/translations.ts',
-      'src/utils/discoveryEngine.ts',
-      'src/utils/admobService.ts',
-      'src/utils/zipExporter.ts',
-      'src/components/AdminDashboardSection.tsx',
-      'src/components/AuthScreen.tsx',
-      'src/components/FeedSection.tsx',
-      'src/components/StudioSection.tsx',
-      'src/components/VideoHubSection.tsx',
-      'src/components/VideoTheaterSection.tsx',
-      'src/components/CinematicCanvasPlayer.tsx',
-      'src/components/SettingsModal.tsx',
-      'src/components/WalletSection.tsx',
-      'src/components/ReviewsSection.tsx',
-      'src/components/MessagingSection.tsx',
-      'src/components/NotificationsSection.tsx',
-      'src/components/SovereignDiscoverySection.tsx',
-      'src/components/MonetizationSection.tsx',
-      'src/components/DecentralizedIdentityModal.tsx',
-      'src/components/PwaInstallModal.tsx',
-      'src/components/OfflineTrialLockModal.tsx',
-      'src/components/FirstTimePostPreferenceModal.tsx',
-      'src/components/NetworkMap.tsx'
-    ];
-
-    for (const relativePath of filesToInclude) {
-      const fullPath = path.join(process.cwd(), relativePath);
-      if (fs.existsSync(fullPath)) {
-        const content = fs.readFileSync(fullPath, 'utf-8');
-        zip.file(relativePath, content);
+    // Helper to recursively add files to ZIP
+    const addDirectoryToZip = (dirPath: string, zipFolder: any) => {
+      const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dirPath, entry.name);
+        if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === '.git' || entry.name === '.vite') {
+          continue;
+        }
+        if (entry.isDirectory()) {
+          const subFolder = zipFolder.folder(entry.name);
+          addDirectoryToZip(fullPath, subFolder);
+        } else if (entry.isFile()) {
+          try {
+            const fileContent = fs.readFileSync(fullPath);
+            zipFolder.file(entry.name, fileContent);
+          } catch (readErr) {
+            console.warn(`Could not read ${fullPath}:`, readErr);
+          }
+        }
       }
-    }
+    };
+
+    addDirectoryToZip(process.cwd(), zip);
 
     const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
     res.setHeader('Content-Type', 'application/zip');

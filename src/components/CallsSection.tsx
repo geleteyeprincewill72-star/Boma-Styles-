@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import VoiceConversation from './VoiceConversation';
+import VoicemailSystem from './VoicemailSystem';
 import { 
   PhoneCall, 
   PhoneOff, 
@@ -18,7 +20,9 @@ import {
   Sparkles, 
   ShieldCheck,
   CheckCircle2,
-  Delete
+  Delete,
+  Voicemail,
+  Radio
 } from 'lucide-react';
 
 interface CallRecord {
@@ -71,6 +75,7 @@ export const CallsSection: React.FC<CallsSectionProps> = ({
   currentUserAvatar,
   theme = 'dark',
 }) => {
+  const [activeSubTab, setActiveSubTab] = useState<'dialer' | 'voice_ai' | 'voicemails'>('dialer');
   const [activeCall, setActiveCall] = useState<{
     contactName: string;
     avatar: string;
@@ -204,22 +209,74 @@ export const CallsSection: React.FC<CallsSectionProps> = ({
         <div>
           <h2 className="text-xl font-extrabold text-slate-100 font-sans flex items-center gap-2">
             <PhoneCall className="w-5 h-5 text-emerald-400" />
-            <span>Voice & Video Calls</span>
+            <span>Voice & Audio Communications</span>
           </h2>
           <p className="text-xs text-slate-400 font-mono mt-0.5">
-            Encrypted WebRTC P2P Voice and Video Call Routing
+            WebRTC Encrypted Calls • AI Voice Conversation • P2P Voicemail System
           </p>
         </div>
 
-        <button
-          onClick={() => startNewCall('Aura Swarm Friend', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150', 'voice')}
-          className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-xs shadow-md shadow-emerald-950/40 transition flex items-center gap-2"
-        >
-          <PhoneCall className="w-4 h-4" />
-          <span>New Voice Call</span>
-        </button>
+        {/* Sub-Tab Navigation Switcher */}
+        <div className="flex bg-slate-950 p-1.5 rounded-2xl border border-slate-800 font-mono text-xs font-bold w-full md:w-auto">
+          <button
+            onClick={() => setActiveSubTab('dialer')}
+            className={`flex-1 md:flex-none px-4 py-2 rounded-xl transition flex items-center justify-center gap-2 ${
+              activeSubTab === 'dialer'
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <PhoneCall className="w-3.5 h-3.5" />
+            <span>Call Dialer</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('voice_ai')}
+            className={`flex-1 md:flex-none px-4 py-2 rounded-xl transition flex items-center justify-center gap-2 ${
+              activeSubTab === 'voice_ai'
+                ? 'bg-gradient-to-r from-purple-600 to-cyan-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Radio className="w-3.5 h-3.5 text-cyan-300" />
+            <span>AI Voice Conversation</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('voicemails')}
+            className={`flex-1 md:flex-none px-4 py-2 rounded-xl transition flex items-center justify-center gap-2 ${
+              activeSubTab === 'voicemails'
+                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Voicemail className="w-3.5 h-3.5 text-purple-300" />
+            <span>Voicemails</span>
+          </button>
+        </div>
       </div>
 
+      {/* Sub-Tab Views */}
+      {activeSubTab === 'voice_ai' && (
+        <VoiceConversation
+          currentUserName={currentUserName}
+          theme={theme}
+        />
+      )}
+
+      {activeSubTab === 'voicemails' && (
+        <VoicemailSystem
+          currentUserName={currentUserName}
+          currentUserAvatar={currentUserAvatar}
+          theme={theme}
+          onQuickCall={(contactName, avatar) => {
+            setActiveSubTab('dialer');
+            startNewCall(contactName, avatar, 'voice');
+          }}
+        />
+      )}
+
+      {activeSubTab === 'dialer' && (
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Col: Dial Pad & Quick Call */}
         <div className="lg:col-span-5 space-y-4">
@@ -343,6 +400,7 @@ export const CallsSection: React.FC<CallsSectionProps> = ({
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 };

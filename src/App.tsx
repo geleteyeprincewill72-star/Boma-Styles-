@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Network, 
   Settings, 
@@ -34,7 +34,14 @@ import {
   TrendingUp,
   BrainCircuit,
   Info,
-  Crown
+  Crown,
+  Clock,
+  X,
+  Download,
+  Flame,
+  Hash,
+  FolderArchive,
+  Check
 } from 'lucide-react';
 import { KeyPair, FeedPost, Comment, Character, ScreenplayBlock, NetworkNode, Review } from './types';
 import { generateSigningKeyPair } from './utils/crypto';
@@ -67,10 +74,12 @@ import ProfileSection from './components/ProfileSection';
 import NavigationSidebar from './components/NavigationSidebar';
 import { Language, TRANSLATIONS } from './utils/translations';
 import { logOnDeviceInteraction } from './utils/discoveryEngine';
+import { exportRepositoryAsZip } from './utils/zipExporter';
 import {
   auth,
   fetchUserProfile,
   saveUserProfile,
+  UserProfile,
   listenToNotifications,
   authenticateAnonymously,
   testConnection,
@@ -357,6 +366,171 @@ export default function App() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [nodes, setNodes] = useState<NetworkNode[]>(INITIAL_NODES);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchHistory, setSearchHistory] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('aura_search_history') || '[]');
+    } catch {
+      return [];
+    }
+  });
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+
+  const saveToSearchHistory = (term: string) => {
+    const clean = term.trim();
+    if (!clean) return;
+    setSearchHistory(prev => {
+      const filtered = prev.filter(item => item.toLowerCase() !== clean.toLowerCase());
+      const updated = [clean, ...filtered].slice(0, 8);
+      localStorage.setItem('aura_search_history', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const removeFromSearchHistory = (termToRemove: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSearchHistory(prev => {
+      const updated = prev.filter(item => item !== termToRemove);
+      localStorage.setItem('aura_search_history', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const clearSearchHistory = () => {
+    setSearchHistory([]);
+    localStorage.removeItem('aura_search_history');
+  };
+
+  // Dynamically compute trending hashtags and topics based on recent popular posts
+  const trendingTopics = useMemo(() => {
+    const hashtagMap = new Map<string, { count: number; totalScore: number; icon: string; category: string }>();
+
+    // Scan all posts for hashtags and high-engagement topics
+    posts.forEach((post) => {
+      const text = `${post.content || ''} ${post.title || ''} ${post.nodeName || ''}`;
+      const matches = text.match(/#[a-zA-Z0-9_]+/g);
+      const engagementScore = (post.likes || 0) * 3 + (post.commentsCount || 0) * 4 + 5;
+
+      if (matches) {
+        matches.forEach((tag) => {
+          const normalized = tag.trim();
+          if (normalized.length >= 2) {
+            const existing = hashtagMap.get(normalized) || { 
+              count: 0, 
+              totalScore: 0, 
+              icon: '⚡', 
+              category: 'Trending' 
+            };
+            existing.count += 1;
+            existing.totalScore += engagementScore;
+            hashtagMap.set(normalized, existing);
+          }
+        });
+      }
+
+      // If post is a high-engagement cinema/video or AI post, extract subject
+      if (post.type === 'play' && post.title) {
+        const topic = `#${post.title.split(' ')[0].replace(/[^a-zA-Z0-9]/g, '')}`;
+        if (topic.length > 2) {
+          const existing = hashtagMap.get(topic) || { 
+            count: 0, 
+            totalScore: 0, 
+            icon: '🎥', 
+            category: 'Cinema' 
+          };
+          existing.count += 1;
+          existing.totalScore += engagementScore;
+          hashtagMap.set(topic, existing);
+        }
+      }
+    });
+
+    // Guaranteed core network hashtags to ensure fresh nodes always have rich discoverability
+    const seedTrending = [
+      { tag: '#AuraNetwork', count: 184, totalScore: 950, icon: '⚡', category: 'Protocol' },
+      { tag: '#DecentralizedAI', count: 142, totalScore: 880, icon: '🤖', category: 'AI' },
+      { tag: '#QuantumCipher', count: 119, totalScore: 760, icon: '🔒', category: 'Security' },
+      { tag: '#P2PStreaming', count: 96, totalScore: 680, icon: '🎥', category: 'Cinema' },
+      { tag: '#ZeroKnowledge', count: 85, totalScore: 590, icon: '🛡️', category: 'Privacy' },
+      { tag: '#VoiceNotes', count: 72, totalScore: 510, icon: '🎙️', category: 'Audio' },
+      { tag: '#OmniMind', count: 63, totalScore: 470, icon: '✨', category: 'Intelligence' }
+    ];
+
+    seedTrending.forEach((item) => {
+      const existing = hashtagMap.get(item.tag);
+      if (!existing) {
+        hashtagMap.set(item.tag, { 
+          count: item.count, 
+          totalScore: item.totalScore, 
+          icon: item.icon, 
+          category: item.category 
+        });
+      } else {
+        existing.totalScore += item.totalScore;
+        existing.count += item.count;
+      }
+    });
+
+    return Array.from(hashtagMap.entries())
+      .map(([tag, data]) => {
+        let icon = data.icon || '⚡';
+        let category = data.category || 'Topic';
+        const lower = tag.toLowerCase();
+        if (lower.includes('ai') || lower.includes('omni') || lower.includes('gemini')) {
+          icon = '🤖';
+          category = 'AI';
+        } else if (lower.includes('cipher') || lower.includes('key') || lower.includes('sec') || lower.includes('zk')) {
+          icon = '🔒';
+          category = 'Security';
+        } else if (lower.includes('stream') || lower.includes('video') || lower.includes('play')) {
+          icon = '🎥';
+          category = 'Media';
+        } else if (lower.includes('voice') || lower.includes('audio') || lower.includes('mic')) {
+          icon = '🎙️';
+          category = 'Audio';
+        } else if (lower.includes('aura') || lower.includes('mesh') || lower.includes('p2p')) {
+          icon = '⚡';
+          category = 'Mesh';
+        }
+
+        return {
+          tag,
+          count: data.count,
+          totalScore: data.totalScore,
+          icon,
+          category,
+          isHot: data.totalScore >= 500
+        };
+      })
+      .sort((a, b) => b.totalScore - a.totalScore)
+      .slice(0, 8);
+  }, [posts]);
+
+  // Source Code ZIP export state
+  const [downloadingZip, setDownloadingZip] = useState(false);
+  const [zipProgress, setZipProgress] = useState(0);
+  const [zipSuccessMessage, setZipSuccessMessage] = useState(false);
+
+  const handleDownloadSourceZip = async () => {
+    if (downloadingZip) return;
+    try {
+      setDownloadingZip(true);
+      setZipProgress(15);
+      await exportRepositoryAsZip(undefined, (progress) => {
+        setZipProgress(progress);
+      });
+      setZipSuccessMessage(true);
+      setTimeout(() => setZipSuccessMessage(false), 3500);
+    } catch (err: any) {
+      console.warn("Client ZIP export error, using direct server route:", err);
+      window.location.href = '/api/download-source-zip';
+    } finally {
+      setTimeout(() => {
+        setDownloadingZip(false);
+        setZipProgress(0);
+      }, 1000);
+    }
+  };
+
   const [showTermuxHelper, setShowTermuxHelper] = useState(false);
 
   // Dynamic Payment configuration state from Firestore (Live subscription)
@@ -504,9 +678,9 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        if (user.emailVerified || user.isAnonymous) {
+        setCurrentUser(user);
+        try {
           const profile = await fetchUserProfile(user.uid);
-          setCurrentUser(user);
           if (profile) {
             setUserProfile(profile);
             setUsername(profile.username);
@@ -517,16 +691,16 @@ export default function App() {
             }
           } else {
             const cleanUname = user.email?.split('@')[0] || `peer_${user.uid.slice(0, 5)}`;
-            const defaultProf = {
+            const defaultProf: UserProfile = {
               uid: user.uid,
               username: cleanUname.toLowerCase().replace(/[^a-z0-9_]/g, ''),
               displayName: user.displayName || cleanUname,
               email: user.email || '',
-              bio: 'Off-grid decentralized mesh node.',
+              bio: 'Aura Member',
               avatar: user.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.uid}`,
               coverPhoto: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=60',
               website: '',
-              location: 'Grid System',
+              location: 'Aura Network',
               isVerified: false,
               role: 'user' as const,
               status: 'active' as const,
@@ -537,9 +711,27 @@ export default function App() {
             setUsername(defaultProf.username);
             setAvatar(defaultProf.avatar);
           }
-        } else {
-          setCurrentUser(null);
-          setUserProfile(null);
+        } catch (authProfErr) {
+          console.warn("Could not retrieve profile immediately on auth state change:", authProfErr);
+          const cleanUname = user.email?.split('@')[0] || `peer_${user.uid.slice(0, 5)}`;
+          const fallbackProf: UserProfile = {
+            uid: user.uid,
+            username: cleanUname.toLowerCase().replace(/[^a-z0-9_]/g, ''),
+            displayName: user.displayName || cleanUname,
+            email: user.email || '',
+            bio: 'Aura Member',
+            avatar: user.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.uid}`,
+            coverPhoto: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=60',
+            website: '',
+            location: 'Aura Network',
+            isVerified: false,
+            role: 'user' as const,
+            status: 'active' as const,
+            createdAt: Date.now()
+          };
+          setUserProfile(fallbackProf);
+          setUsername(fallbackProf.username);
+          setAvatar(fallbackProf.avatar);
         }
       } else {
         setCurrentUser(null);
@@ -1037,14 +1229,22 @@ export default function App() {
 
         {/* Global Search Bar in Header */}
         <div className="flex-grow max-w-sm mx-6 hidden sm:block relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
             <Search className="h-4 w-4 text-slate-500" />
           </div>
           <input
             type="text"
             placeholder={t('searchPlaceholder')}
             value={searchQuery}
+            onFocus={() => setShowSearchDropdown(true)}
+            onBlur={() => setTimeout(() => setShowSearchDropdown(false), 200)}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                saveToSearchHistory(searchQuery);
+                setShowSearchDropdown(false);
+              }
+            }}
             className={`block w-full pl-9 pr-8 py-1.5 border rounded-lg text-xs placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 transition font-sans ${
               isLight ? 'bg-slate-100/80 border-slate-200 text-slate-850' : 'bg-slate-950 border-slate-850 text-slate-200'
             }`}
@@ -1052,14 +1252,196 @@ export default function App() {
           {searchQuery && (
             <button 
               onClick={() => setSearchQuery('')}
-              className={`absolute inset-y-0 right-0 pr-3 flex items-center text-[10px] font-mono ${
+              className={`absolute inset-y-0 right-0 pr-3 flex items-center text-[10px] font-mono z-10 ${
                 isLight ? 'text-slate-400 hover:text-slate-600' : 'text-slate-500 hover:text-slate-300'
               }`}
             >
               {t('clearBtn')}
             </button>
           )}
+
+          {/* Search History, Trending Now & Popular Suggestions Dropdown */}
+          {showSearchDropdown && (
+            <div 
+              className={`absolute top-full left-0 right-0 mt-1.5 rounded-2xl border shadow-2xl z-50 overflow-hidden font-sans ${
+                isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#0A0F1D] border-slate-800 text-slate-100'
+              }`}
+              onMouseDown={(e) => e.preventDefault()}
+            >
+              {/* Dynamic Trending Now Section */}
+              <div className={`px-3.5 py-2 border-b flex items-center justify-between text-[11px] font-mono font-bold ${
+                isLight ? 'bg-purple-50/90 border-slate-200 text-purple-700' : 'bg-purple-950/40 border-slate-850 text-purple-300'
+              }`}>
+                <span className="flex items-center gap-1.5">
+                  <Flame className="w-3.5 h-3.5 text-purple-400 animate-pulse" />
+                  <span>Trending Now</span>
+                </span>
+                <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                  Live Topics
+                </span>
+              </div>
+
+              {/* Dynamic Trending Topic Chips */}
+              <div className="p-2.5 flex flex-wrap gap-1.5 border-b border-slate-800/60">
+                {trendingTopics.map((topic, tIdx) => (
+                  <button
+                    key={tIdx}
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery(topic.tag);
+                      saveToSearchHistory(topic.tag);
+                      setShowSearchDropdown(false);
+                    }}
+                    className={`px-2.5 py-1 rounded-xl text-[11px] font-mono font-semibold transition flex items-center gap-1.5 border ${
+                      isLight 
+                        ? 'bg-purple-50/60 border-purple-200 text-purple-900 hover:bg-purple-100 hover:border-purple-300' 
+                        : 'bg-purple-950/25 border-purple-900/60 text-purple-200 hover:bg-purple-900/40 hover:border-purple-500/60'
+                    }`}
+                  >
+                    <span>{topic.icon}</span>
+                    <span className="font-bold">{topic.tag}</span>
+                    <span className="text-[9px] opacity-70">· {topic.count}</span>
+                    {topic.isHot && (
+                      <span className="text-[8px] font-bold px-1 py-0.2 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                        HOT
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {/* Most Popular Categories */}
+              <div className={`px-3.5 py-1.5 border-b flex items-center justify-between text-[11px] font-mono font-bold ${
+                isLight ? 'bg-amber-50/80 border-slate-100 text-amber-700' : 'bg-amber-950/20 border-slate-900 text-amber-400'
+              }`}>
+                <span className="flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  Most Popular Channels
+                </span>
+                <span className="text-[9px] uppercase tracking-wider text-slate-500">Discover</span>
+              </div>
+
+              <div className="p-2 flex flex-wrap gap-1.5 border-b border-slate-800/60">
+                {[
+                  { label: 'AI Dispatches', icon: '🤖' },
+                  { label: 'Sovereign P2P', icon: '🔒' },
+                  { label: 'Cipher Keys', icon: '🔑' },
+                  { label: 'Location Radar', icon: '📡' },
+                  { label: 'Voice Notes', icon: '🎙️' }
+                ].map((popular, pIdx) => (
+                  <button
+                    key={pIdx}
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery(popular.label);
+                      saveToSearchHistory(popular.label);
+                      setShowSearchDropdown(false);
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-semibold transition flex items-center gap-1 border ${
+                      isLight 
+                        ? 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700' 
+                        : 'bg-slate-900/80 border-slate-800 text-slate-300 hover:bg-amber-950/50 hover:border-amber-500/50 hover:text-amber-300'
+                    }`}
+                  >
+                    <span>{popular.icon}</span>
+                    <span>{popular.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Recent Searches Header */}
+              {searchHistory.length > 0 ? (
+                <>
+                  <div className={`px-3.5 py-1.5 border-b flex items-center justify-between text-[11px] font-mono font-bold ${
+                    isLight ? 'bg-slate-50 border-slate-100 text-slate-500' : 'bg-slate-950/80 border-slate-900 text-slate-400'
+                  }`}>
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-cyan-400" />
+                      Recent Searches ({searchHistory.length})
+                    </span>
+                    <button
+                      type="button"
+                      onClick={clearSearchHistory}
+                      className="px-2 py-0.5 bg-rose-950/60 border border-rose-800/60 text-rose-300 hover:bg-rose-900 hover:text-white rounded-md text-[10px] font-bold transition flex items-center gap-1"
+                      title="Clear all recent search terms"
+                    >
+                      <X className="w-3 h-3" />
+                      <span>Clear Search History</span>
+                    </button>
+                  </div>
+
+                  <div className="py-1 max-h-40 overflow-y-auto">
+                    {searchHistory.map((item, index) => (
+                      <div
+                        key={index}
+                        onClick={() => {
+                          setSearchQuery(item);
+                          setShowSearchDropdown(false);
+                        }}
+                        className={`px-3.5 py-1.5 text-xs flex items-center justify-between cursor-pointer transition ${
+                          isLight ? 'hover:bg-slate-100' : 'hover:bg-slate-900'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2 truncate">
+                          <Search className="w-3 h-3 text-slate-500 shrink-0" />
+                          <span className="truncate">{item}</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => removeFromSearchHistory(item, e)}
+                          className="p-1 rounded-md text-slate-500 hover:text-red-400 hover:bg-slate-800/50 transition shrink-0"
+                          title="Remove from history"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="p-2.5 text-center text-[10px] font-mono text-slate-500">
+                  No recent searches yet. Search any keyword or pick a trending topic!
+                </div>
+              )}
+            </div>
+          )}
         </div>
+
+        {/* Download Source Code ZIP Button (Prominent in Header on Entry) */}
+        <button
+          id="btn-download-source-zip"
+          type="button"
+          onClick={handleDownloadSourceZip}
+          disabled={downloadingZip}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-mono font-bold transition-all shadow-md active:scale-95 ${
+            zipSuccessMessage
+              ? 'bg-emerald-600 border-emerald-400 text-white shadow-emerald-950/50'
+              : downloadingZip
+              ? 'bg-cyan-950 border-cyan-500/50 text-cyan-300 animate-pulse'
+              : 'bg-gradient-to-r from-cyan-600 via-indigo-600 to-purple-600 hover:from-cyan-500 hover:via-indigo-500 hover:to-purple-500 text-white border-cyan-400/30 shadow-purple-950/40 hover:shadow-cyan-500/20'
+          }`}
+          title="Download complete source code ZIP archive of this web application immediately"
+        >
+          {zipSuccessMessage ? (
+            <>
+              <Check className="w-4 h-4 text-white animate-bounce shrink-0" />
+              <span className="hidden sm:inline">Source Code Downloaded!</span>
+              <span className="sm:hidden">Ready!</span>
+            </>
+          ) : downloadingZip ? (
+            <>
+              <div className="w-3.5 h-3.5 border-2 border-cyan-300 border-t-transparent rounded-full animate-spin shrink-0" />
+              <span className="hidden sm:inline">Zipping {zipProgress}%...</span>
+              <span className="sm:hidden">{zipProgress}%</span>
+            </>
+          ) : (
+            <>
+              <Download className="w-4 h-4 text-cyan-200 shrink-0" />
+              <span className="hidden sm:inline">Download Source ZIP</span>
+              <span className="sm:hidden">Source ZIP</span>
+            </>
+          )}
+        </button>
 
         {/* Current Active Cryptographic Identity Display */}
         <div className={`hidden md:flex items-center gap-3 px-3.5 py-1.5 rounded-lg border shadow-inner ${

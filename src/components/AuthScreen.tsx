@@ -4,16 +4,16 @@ import {
   auth, 
   saveUserProfile, 
   checkUsernameUnique,
-  db
+  fetchUserProfile
 } from '../utils/firebase';
 import { 
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
-  sendEmailVerification,
   signInWithPopup,
-  GoogleAuthProvider,
-  FacebookAuthProvider
+  signInWithRedirect,
+  getRedirectResult,
+  GoogleAuthProvider
 } from 'firebase/auth';
 import { 
   Lock, 
@@ -23,52 +23,127 @@ import {
   CheckCircle, 
   AlertCircle, 
   ArrowRight, 
-  Key, 
-  ShieldAlert,
-  Fingerprint,
-  Facebook,
-  Phone
+  Eye,
+  EyeOff,
+  AtSign,
+  Globe,
+  ExternalLink,
+  Copy,
+  Check,
+  Download
 } from 'lucide-react';
+import { exportRepositoryAsZip } from '../utils/zipExporter';
 
 interface AuthScreenProps {
   onAuthSuccess: (uid: string, username: string, avatar: string, email: string) => void;
 }
 
 export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
-  const [mode, setMode] = useState<'login' | 'signup' | 'forgot' | 'verify'>('login');
+  const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('login');
   
-  // Form states
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [usernameInput, setUsernameInput] = useState('');
-  const [displayNameInput, setDisplayNameInput] = useState('');
+  // Download source code ZIP state
+  const [downloadingZip, setDownloadingZip] = useState(false);
+  const [zipProgress, setZipProgress] = useState(0);
+  const [zipSuccessMessage, setZipSuccessMessage] = useState(false);
+
+  const handleDownloadSourceZip = async () => {
+    if (downloadingZip) return;
+    try {
+      setDownloadingZip(true);
+      setZipProgress(15);
+      await exportRepositoryAsZip(undefined, (progress) => {
+        setZipProgress(progress);
+      });
+      setZipSuccessMessage(true);
+      setTimeout(() => setZipSuccessMessage(false), 3500);
+    } catch (err: any) {
+      console.warn("Client ZIP export error, using direct server route:", err);
+      window.location.href = '/api/download-source-zip';
+    } finally {
+      setTimeout(() => {
+        setDownloadingZip(false);
+        setZipProgress(0);
+      }, 1000);
+    }
+  };
   
-  // Phone Sign-In & OTP State
-  const [phoneNumberInput, setPhoneNumberInput] = useState('');
-  const [showPhoneLogin, setShowPhoneLogin] = useState(false);
-  const [loginCustomName, setLoginCustomName] = useState('');
-  const [otpCodeInput, setOtpCodeInput] = useState('');
-  const [generatedOtp, setGeneratedOtp] = useState('');
-  const [otpSentPhone, setOtpSentPhone] = useState('');
-  const [recoveryPhoneInput, setRecoveryPhoneInput] = useState('');
+  // Sign Up Form States
+  const [fullName, setFullName] = useState('');
+  const [username, setUsername] = useState('');
+  const [signupEmail, setSignupEmail] = useState('');
+  const [signupPassword, setSignupPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  
+  // Login Form States
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
 
-  // Anti-Piracy Brute-Force & Recovery States
-  const [failedLoginCount, setFailedLoginCount] = useState<number>(0);
-  const [isLockedOut, setIsLockedOut] = useState<boolean>(false);
-  const [lockoutTimer, setLockoutTimer] = useState<number>(0);
-  const [recoveryKeyInput, setRecoveryKeyInput] = useState<string>('');
-  const [newPasswordInput, setNewPasswordInput] = useState<string>('');
-  const [forgotTab, setForgotTab] = useState<'phone' | 'email' | 'key'>('phone');
+  // Password Reset Form State
+  const [resetEmail, setResetEmail] = useState('');
 
-  // Status states
+  // UI Toggles
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Status States
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<React.ReactNode | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
+  const [copiedDomain, setCopiedDomain] = useState(false);
 
-  // Welcome Consent Modal state
+  // Welcome Consent Modal State
   const [showConsentModal, setShowConsentModal] = useState<boolean>(() => {
     return localStorage.getItem('aura_terms_agreed') !== 'true';
   });
+
+  // Handle OAuth Redirect Result on Mount
+  useEffect(() => {
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (result && result.user) {
+          setLoading(true);
+          const user = result.user;
+          let profile = await fetchUserProfile(user.uid);
+          let finalUsername = profile?.username;
+          let finalAvatar = profile?.avatar || user.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.uid}`;
+
+          if (!profile) {
+            const baseUsername = user.displayName?.toLowerCase().replace(/[^a-z0-9]/g, '') || user.email?.split('@')[0] || 'peer';
+            finalUsername = `${baseUsername}_${Math.floor(Math.random() * 900) + 100}`;
+            
+            profile = {
+              uid: user.uid,
+              username: finalUsername,
+              displayName: user.displayName || finalUsername,
+              email: user.email || '',
+              bio: 'Aura Member via Google',
+              avatar: finalAvatar,
+              coverPhoto: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=60',
+              website: '',
+              location: 'Google Identity',
+              isVerified: true,
+              role: 'user',
+              status: 'active',
+              createdAt: Date.now()
+            };
+
+            await saveUserProfile(user.uid, profile);
+          }
+
+          onAuthSuccess(user.uid, finalUsername || 'peer', finalAvatar, user.email || '');
+        }
+      })
+      .catch((err: any) => {
+        console.warn("Redirect sign-in handler error:", err);
+        if (err.code === 'auth/unauthorized-domain') {
+          setError(renderUnauthorizedDomainAlert(window.location.hostname));
+        }
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
 
   const handleAgreeConsent = (enableLocationSafety: boolean) => {
     localStorage.setItem('aura_terms_agreed', 'true');
@@ -77,401 +152,367 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
   };
 
   const handleDeclineConsent = () => {
-    // If user chooses not to agree, allow them to exit
     window.location.href = 'about:blank';
   };
 
-  const incrementRealLogins = () => {
-    try {
-      const current = parseInt(localStorage.getItem('aura_real_logins_total') || '142', 10);
-      const next = current + 1;
-      localStorage.setItem('aura_real_logins_total', next.toString());
-    } catch (e) {
-      console.warn("Logins counter update fallback.");
-    }
+  const isValidEmail = (emailStr: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailStr.trim());
   };
 
-  const handleFailedAttempt = () => {
-    const nextCount = failedLoginCount + 1;
-    setFailedLoginCount(nextCount);
-    if (nextCount >= 5) {
-      setIsLockedOut(true);
-      setLockoutTimer(60);
-      setError("🚨 ANTI-PIRACY SECURITY LOCKOUT: 5 consecutive failed login attempts detected. Gateway frozen for 60s to prevent brute-force intrusion.");
-      const interval = setInterval(() => {
-        setLockoutTimer((prev) => {
-          if (prev <= 1) {
-            clearInterval(interval);
-            setIsLockedOut(false);
-            setFailedLoginCount(0);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
+  const isValidUsername = (unameStr: string) => {
+    return /^[a-zA-Z0-9_]{3,20}$/.test(unameStr.trim());
   };
 
-  const handlePhoneSignInSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!phoneNumberInput.trim()) return;
+  const handleGuestSignIn = async () => {
     setLoading(true);
     setError(null);
-
     try {
-      const cleanPhone = phoneNumberInput.replace(/[^0-9]/g, '');
-      const isCreatorPhone = cleanPhone === '08000000000' || cleanPhone.endsWith('0000000');
+      const guestUid = `peer_${Date.now()}_${Math.floor(Math.random() * 900) + 100}`;
+      const guestName = `Peer_${guestUid.slice(-4)}`;
+      const guestAvatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${guestUid}`;
+      const guestEmail = `${guestName.toLowerCase()}@aura.net`;
 
-      const simUid = isCreatorPhone ? `fb_aura_admin_node_${cleanPhone || '0000000000'}` : `phone_peer_${cleanPhone}`;
-      const simUsername = isCreatorPhone ? 'aura_admin' : `phone_${cleanPhone.slice(-4)}`;
-      const simDisplayName = isCreatorPhone ? 'Aura Creator' : `Phone Peer (${phoneNumberInput.trim()})`;
-      const simEmail = isCreatorPhone ? 'creator@aura.net' : `peer_${cleanPhone}@phone.node`;
-      const avatar = isCreatorPhone 
-        ? `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=60`
-        : `https://api.dicebear.com/7.x/bottts/svg?seed=${simUid}`;
-
-      await saveUserProfile(simUid, {
-        uid: simUid,
-        username: simUsername,
-        displayName: simDisplayName,
-        email: simEmail,
-        phoneNumber: phoneNumberInput.trim(),
-        bio: isCreatorPhone ? 'Aura Creator Account. Full admin control & Source ZIP access enabled.' : 'Verified phone node peer.',
-        avatar: avatar,
+      await saveUserProfile(guestUid, {
+        uid: guestUid,
+        username: guestName.toLowerCase(),
+        displayName: guestName,
+        email: guestEmail,
+        bio: 'Aura Member (Peer Guest)',
+        avatar: guestAvatar,
         coverPhoto: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=60',
         website: '',
-        location: isCreatorPhone ? 'Creator Headquarters' : 'Phone Grid',
-        isVerified: true,
-        role: isCreatorPhone ? 'admin' : 'user',
+        location: 'Aura Network',
+        isVerified: false,
+        role: 'user',
         status: 'active',
         createdAt: Date.now()
       });
 
-      localStorage.setItem('aether_peer_profile', JSON.stringify({
-        username: simUsername,
-        avatar: avatar
-      }));
-
-      onAuthSuccess(simUid, simUsername, avatar, simEmail);
+      onAuthSuccess(guestUid, guestName.toLowerCase(), guestAvatar, guestEmail);
     } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'Phone Sign-In failed.');
+      setError('Failed to launch guest session: ' + err.message);
     } finally {
       setLoading(false);
     }
   };
 
+  const renderUnauthorizedDomainAlert = (domainName: string) => (
+    <div className="space-y-3 p-3.5 bg-amber-950/50 border border-amber-600/50 rounded-2xl text-xs text-amber-200">
+      <div className="flex items-center gap-2 font-bold text-amber-300">
+        <Globe className="w-4.5 h-4.5 text-amber-400 shrink-0" />
+        <span>Firebase Authorized Domain Check Required</span>
+      </div>
+      <p className="text-[11px] text-slate-300 leading-relaxed">
+        Firebase Authentication restricts Google Sign-In to authorized domains. Add this domain to your Firebase Console settings:
+      </p>
+      
+      <div className="bg-slate-950/90 border border-slate-800 p-2.5 rounded-xl space-y-1.5">
+        <div className="text-[10px] uppercase font-mono text-slate-400 font-semibold">Production Domain Hostname</div>
+        <div className="flex items-center justify-between bg-slate-900 px-3 py-2 rounded-lg font-mono text-cyan-300 font-bold border border-cyan-500/30">
+          <span className="truncate text-xs">{domainName}</span>
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard.writeText(domainName);
+              setCopiedDomain(true);
+              setTimeout(() => setCopiedDomain(false), 2000);
+            }}
+            className="ml-2 px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-[10px] font-sans font-bold flex items-center gap-1 shrink-0 transition"
+          >
+            {copiedDomain ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+            <span>{copiedDomain ? 'COPIED!' : 'COPY'}</span>
+          </button>
+        </div>
+      </div>
+
+      <ol className="list-decimal list-inside text-[11px] space-y-1.5 font-mono text-slate-300 bg-slate-950/80 p-3 rounded-xl border border-slate-800">
+        <li>Open <a href="https://console.firebase.google.com/project/aura-8fda0/authentication/settings" target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline font-bold inline-flex items-center gap-1">Firebase Settings <ExternalLink className="w-3 h-3" /></a></li>
+        <li>Go to <strong>Authentication → Settings → Authorized domains</strong></li>
+        <li>Click <strong>Add domain</strong> and paste: <strong className="text-white">{domainName}</strong></li>
+        <li>Save changes and refresh this page.</li>
+      </ol>
+
+      <div className="flex flex-col gap-2 pt-1">
+        <button
+          type="button"
+          onClick={() => {
+            const provider = new GoogleAuthProvider();
+            signInWithRedirect(auth, provider);
+          }}
+          className="w-full py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-[11px] font-bold rounded-xl transition flex items-center justify-center gap-1.5 shadow"
+        >
+          <span>TRY GOOGLE REDIRECT MODE</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={handleGuestSignIn}
+          className="w-full py-2 bg-slate-900 hover:bg-slate-850 text-slate-300 hover:text-white text-[11px] font-bold rounded-xl transition flex items-center justify-center gap-1.5 border border-slate-800"
+        >
+          <span>CONTINUE IN PEER DEMO MODE</span>
+        </button>
+      </div>
+    </div>
+  );
+
+  // 1. LOGIN HANDLER (Email + Password)
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setInfoMessage(null);
+
+    const cleanEmail = loginEmail.trim();
+    if (!cleanEmail || !loginPassword) {
+      setError('Please enter both Email Address and Password.');
+      return;
+    }
+
+    if (!isValidEmail(cleanEmail)) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, cleanEmail, loginPassword);
+      const user = userCredential.user;
+
+      if (user) {
+        let profile = null;
+        try {
+          profile = await fetchUserProfile(user.uid);
+        } catch (_) {}
+        const finalUsername = profile?.username || user.email?.split('@')[0] || 'peer';
+        const finalAvatar = profile?.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.uid}`;
+        
+        onAuthSuccess(user.uid, finalUsername, finalAvatar, user.email || cleanEmail);
+      }
+    } catch (err: any) {
+      console.error("Firebase Login Error:", err);
+      setLoading(false);
+
+      if (err.code === 'auth/operation-not-allowed') {
+        setError(
+          <div className="space-y-2">
+            <p className="font-bold text-amber-300">Email/Password sign-in is disabled in your Firebase project.</p>
+            <p className="text-[11px] leading-relaxed">
+              To enable it:
+            </p>
+            <ol className="list-decimal list-inside text-[11px] space-y-1 font-mono text-slate-300 bg-slate-950/80 p-2.5 rounded-lg border border-slate-800">
+              <li>Open <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline">Firebase Console</a></li>
+              <li>Select Project: <strong>aura-8fda0</strong></li>
+              <li>Go to <strong>Authentication → Sign-in method</strong></li>
+              <li>Click <strong>Email/Password</strong> and toggle <strong>Enable</strong>, then click <strong>Save</strong></li>
+            </ol>
+          </div>
+        );
+      } else if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+        setError('Invalid email or password. Please check your credentials and try again.');
+      } else if (err.code === 'auth/too-many-requests') {
+        setError('Too many failed login attempts. Please try again later or reset your password.');
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setError(renderUnauthorizedDomainAlert(window.location.hostname));
+      } else {
+        setError(err.message || 'Failed to sign in. Please try again.');
+      }
+    }
+  };
+
+  // 2. SIGN UP HANDLER (Create Account)
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setInfoMessage(null);
+
+    const cleanName = fullName.trim();
+    const cleanUsername = username.trim().toLowerCase();
+    const cleanEmail = signupEmail.trim().toLowerCase();
+
+    if (!cleanName || !cleanUsername || !cleanEmail || !signupPassword || !confirmPassword) {
+      setError('Please fill in all required fields.');
+      return;
+    }
+
+    if (!isValidEmail(cleanEmail)) {
+      setError('Please enter a valid email address (e.g. name@example.com).');
+      return;
+    }
+
+    if (!isValidUsername(cleanUsername)) {
+      setError('Username must be 3-20 characters long and contain only letters, numbers, or underscores.');
+      return;
+    }
+
+    if (signupPassword.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      return;
+    }
+
+    if (signupPassword !== confirmPassword) {
+      setError('Passwords do not match. Please verify your confirm password.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const isUnique = await checkUsernameUnique(cleanUsername);
+      if (!isUnique) {
+        setError(`The username "@${cleanUsername}" is already taken. Please choose another username.`);
+        setLoading(false);
+        return;
+      }
+
+      const userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, signupPassword);
+      const user = userCredential.user;
+
+      if (user) {
+        const avatarUrl = `https://api.dicebear.com/7.x/bottts/svg?seed=${user.uid}`;
+
+        await saveUserProfile(user.uid, {
+          uid: user.uid,
+          displayName: cleanName,
+          username: cleanUsername,
+          email: cleanEmail,
+          bio: 'Aura Network Member',
+          avatar: avatarUrl,
+          coverPhoto: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=60',
+          website: '',
+          location: 'Aura Network',
+          isVerified: false,
+          role: 'user',
+          status: 'active',
+          createdAt: Date.now()
+        });
+
+        onAuthSuccess(user.uid, cleanUsername, avatarUrl, cleanEmail);
+      }
+    } catch (err: any) {
+      console.error("Firebase Sign-Up Error:", err);
+      setLoading(false);
+
+      if (err.code === 'auth/operation-not-allowed') {
+        setError(
+          <div className="space-y-2">
+            <p className="font-bold text-amber-300">Email/Password sign-up is disabled in your Firebase project.</p>
+            <p className="text-[11px] leading-relaxed">
+              To enable it in Firebase Console:
+            </p>
+            <ol className="list-decimal list-inside text-[11px] space-y-1 font-mono text-slate-300 bg-slate-950/80 p-2.5 rounded-lg border border-slate-800">
+              <li>Open <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline">Firebase Console</a></li>
+              <li>Select Project: <strong>aura-8fda0</strong></li>
+              <li>Go to <strong>Authentication → Sign-in method</strong></li>
+              <li>Click <strong>Email/Password</strong> and toggle <strong>Enable</strong>, then click <strong>Save</strong></li>
+            </ol>
+          </div>
+        );
+      } else if (err.code === 'auth/email-already-in-use') {
+        setError('An account with this email address already exists. Please sign in instead.');
+      } else if (err.code === 'auth/weak-password') {
+        setError('Password is too weak. Please use a stronger password with at least 6 characters.');
+      } else {
+        setError(err.message || 'Failed to create account. Please try again.');
+      }
+    }
+  };
+
+  // 3. GOOGLE SIGN IN HANDLER
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setError(null);
+    setInfoMessage(null);
+
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
       
       if (user) {
-        // Build username from display name or email
-        const baseUsername = user.displayName?.toLowerCase().replace(/\s+/g, '') || user.email?.split('@')[0] || 'peer';
-        const finalUsername = `${baseUsername}_${Math.floor(Math.random() * 900) + 100}`;
-        const avatar = user.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.uid}`;
-        
-        await saveUserProfile(user.uid, {
-          uid: user.uid,
-          username: finalUsername,
-          displayName: user.displayName || finalUsername,
-          email: user.email || '',
-          bio: 'Off-grid decentralized mesh node.',
-          avatar: avatar,
-          coverPhoto: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=60',
-          website: '',
-          location: 'Swarm Coordinates',
-          isVerified: true,
-          role: 'user',
-          status: 'active',
-          createdAt: Date.now()
-        });
-        
-        onAuthSuccess(user.uid, finalUsername, avatar, user.email || '');
-      }
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'Google Sign-In failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
+        let profile = null;
+        try {
+          profile = await fetchUserProfile(user.uid);
+        } catch (_) {}
+        let finalUsername = profile?.username;
+        let finalAvatar = profile?.avatar || user.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.uid}`;
 
-  const handleFacebookSignIn = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const provider = new FacebookAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      
-      if (user) {
-        const isAuraAdmin = 
-          (user.displayName && user.displayName.toLowerCase().includes('aura admin')) ||
-          (user.email && user.email.toLowerCase().includes('aura.net'));
+        if (!profile) {
+          const baseUsername = user.displayName?.toLowerCase().replace(/[^a-z0-9]/g, '') || user.email?.split('@')[0] || 'peer';
+          finalUsername = `${baseUsername}_${Math.floor(Math.random() * 900) + 100}`;
+          
+          profile = {
+            uid: user.uid,
+            username: finalUsername,
+            displayName: user.displayName || finalUsername,
+            email: user.email || '',
+            bio: 'Aura Member via Google',
+            avatar: finalAvatar,
+            coverPhoto: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=60',
+            website: '',
+            location: 'Google Identity',
+            isVerified: true,
+            role: 'user',
+            status: 'active',
+            createdAt: Date.now()
+          };
 
-        const role = isAuraAdmin ? 'admin' : 'user';
-        const finalUsername = isAuraAdmin ? 'aura_admin' : `${user.displayName?.toLowerCase().replace(/\s+/g, '') || 'fb_peer'}_${Math.floor(Math.random() * 900) + 100}`;
-        const avatar = user.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.uid}`;
-        
-        await saveUserProfile(user.uid, {
-          uid: user.uid,
-          username: finalUsername,
-          displayName: user.displayName || (isAuraAdmin ? 'Aura Admin' : finalUsername),
-          email: user.email || '',
-          phoneNumber: user.phoneNumber || '',
-          bio: isAuraAdmin ? 'Aura Admin Account. Full control protocol enabled.' : 'Off-grid decentralized mesh node.',
-          avatar: avatar,
-          coverPhoto: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=60',
-          website: '',
-          location: isAuraAdmin ? 'System Core' : 'Swarm Coordinates',
-          isVerified: true,
-          role: role,
-          status: 'active',
-          createdAt: Date.now()
-        });
-        
-        onAuthSuccess(user.uid, finalUsername, avatar, user.email || '');
-      }
-    } catch (err: any) {
-      console.error(err);
-      if (err.code === 'auth/popup-blocked' || err.code === 'auth/operation-not-allowed' || err.message?.includes('popup')) {
-        setError('Facebook auth popup was blocked or could not complete in this preview frame. Please use the simulated high-access bypass connection below.');
-      } else {
-        setError(err.message || 'Facebook Sign-In failed.');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSimulatedFacebookSignIn = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const simUid = 'fb_aura_admin_node_0000';
-      const simUsername = 'aura_admin';
-      const simDisplayName = 'Aura Admin';
-      const simPhoneNumber = '';
-      const simEmail = 'admin@aura.net';
-      const avatar = `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=60`;
-      
-      await saveUserProfile(simUid, {
-        uid: simUid,
-        username: simUsername,
-        displayName: simDisplayName,
-        email: simEmail,
-        phoneNumber: simPhoneNumber,
-        bio: 'Aura Admin Account. Full control protocol enabled.',
-        avatar: avatar,
-        coverPhoto: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=60',
-        website: '',
-        location: 'System Core',
-        isVerified: true,
-        role: 'admin',
-        status: 'active',
-        createdAt: Date.now()
-      });
-      
-      localStorage.setItem('aether_peer_profile', JSON.stringify({
-        username: simUsername,
-        avatar: avatar
-      }));
-      
-      onAuthSuccess(simUid, simUsername, avatar, simEmail);
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'Simulated Facebook Sign-In failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isLockedOut) {
-      setError(`🚨 Gateway frozen for ${lockoutTimer}s. Anti-piracy brute force protection active.`);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    setInfoMessage(null);
-
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      if (user) {
-        if (!user.emailVerified) {
-          setMode('verify');
-          setLoading(false);
-          return;
+          await saveUserProfile(user.uid, profile);
         }
 
-        // Fetch User profile
-        const docSnap = await fetch(`/api/users/${user.uid}`).then(res => res.json()).catch(() => null);
-        const fetchedName = docSnap?.username || user.email?.split('@')[0] || 'AnonPeer';
-        const profileUsername = loginCustomName.trim() || fetchedName;
-        const profileAvatar = docSnap?.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.uid}`;
-        
-        incrementRealLogins();
-        onAuthSuccess(user.uid, profileUsername, profileAvatar, user.email || '');
+        onAuthSuccess(user.uid, finalUsername || 'peer', finalAvatar, user.email || '');
       }
     } catch (err: any) {
-      console.error(err);
-      handleFailedAttempt();
-      setError(err.message || 'Login failed. Please check credentials.');
-    } finally {
+      console.error("Google Sign-In Error:", err);
       setLoading(false);
+
+      if (err.code === 'auth/operation-not-allowed') {
+        setError(
+          <div className="space-y-2">
+            <p className="font-bold text-amber-300">Google Sign-In provider is disabled in Firebase Console.</p>
+            <ol className="list-decimal list-inside text-[11px] space-y-1 font-mono text-slate-300 bg-slate-950/80 p-2.5 rounded-lg border border-slate-800">
+              <li>Open <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline">Firebase Console</a></li>
+              <li>Select Project: <strong>dependable-limiter-p6rpq</strong></li>
+              <li>Go to <strong>Authentication → Sign-in method</strong></li>
+              <li>Click <strong>Google</strong> and toggle <strong>Enable</strong>, select support email, then click <strong>Save</strong></li>
+            </ol>
+          </div>
+        );
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setError(renderUnauthorizedDomainAlert(window.location.hostname));
+      } else if (err.code === 'auth/popup-closed-by-user') {
+        setError('Google Sign-In popup was closed before completing sign-in.');
+      } else if (err.code === 'auth/popup-blocked') {
+        setError('Google Sign-In popup was blocked by your browser. Please allow popups for this site and try again.');
+      } else {
+        setError(err.message || 'Failed to sign in with Google. Please try again.');
+      }
     }
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setInfoMessage(null);
-
-    const cleanPhone = phoneNumberInput.replace(/[^0-9+]/g, '');
-    if (!cleanPhone || cleanPhone.length < 7) {
-      setError('Please enter a valid phone number with country code (e.g. +1 555 019 2831).');
-      setLoading(false);
-      return;
-    }
-
-    if (!displayNameInput.trim()) {
-      setError('Please enter your Display Name.');
-      setLoading(false);
-      return;
-    }
-
-    if (!password || password.length < 6) {
-      setError('Password must be at least 6 characters long.');
-      setLoading(false);
-      return;
-    }
-
-    // Generate 6-digit OTP code for secure verification
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedOtp(code);
-    setOtpSentPhone(cleanPhone);
-
-    // Simulated SMS gateway send
-    setInfoMessage(`📱 SMS OTP Code dispatched to ${cleanPhone}. (Verification Code: ${code})`);
-    setMode('verify');
-    setLoading(false);
-  };
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    if (otpCodeInput.trim() !== generatedOtp && otpCodeInput.trim() !== '123456') {
-      setError('Invalid 6-digit OTP code. Please check your SMS or try 123456 for instant bypass.');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const cleanPhone = otpSentPhone.replace(/[^0-9]/g, '');
-      const isCreatorPhone = cleanPhone === '08000000000' || cleanPhone.endsWith('0000000');
-
-      const simUid = isCreatorPhone ? `aura_admin_node_${cleanPhone || '0000'}` : `aura_phone_${cleanPhone}`;
-      const simUsername = isCreatorPhone ? 'aura_admin' : `user_${cleanPhone.slice(-4)}`;
-      const simDisplayName = displayNameInput.trim() || (isCreatorPhone ? 'Aura Creator' : `Aura User (${cleanPhone.slice(-4)})`);
-      const simEmail = email.trim() || (isCreatorPhone ? 'creator@aura.app' : `user_${cleanPhone}@aura.app`);
-      const avatar = isCreatorPhone 
-        ? `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=60`
-        : `https://api.dicebear.com/7.x/bottts/svg?seed=${simUid}`;
-
-      await saveUserProfile(simUid, {
-        uid: simUid,
-        username: simUsername,
-        displayName: simDisplayName,
-        email: simEmail,
-        phoneNumber: otpSentPhone,
-        bio: 'Verified Aura Member account.',
-        avatar: avatar,
-        coverPhoto: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=60',
-        website: '',
-        location: isCreatorPhone ? 'Creator HQ' : 'Verified Node',
-        isVerified: true,
-        role: isCreatorPhone ? 'admin' : 'user',
-        status: 'active',
-        createdAt: Date.now()
-      });
-
-      localStorage.setItem('aether_peer_profile', JSON.stringify({
-        username: simUsername,
-        avatar: avatar
-      }));
-
-      onAuthSuccess(simUid, simUsername, avatar, simEmail);
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'OTP verification failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePhonePasswordRecovery = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setInfoMessage(null);
-
-    const cleanPhone = recoveryPhoneInput.replace(/[^0-9+]/g, '');
-    if (!cleanPhone || cleanPhone.length < 7) {
-      setError('Please enter a valid phone number for SMS recovery.');
-      setLoading(false);
-      return;
-    }
-
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedOtp(code);
-    setOtpSentPhone(cleanPhone);
-    setInfoMessage(`📱 Password recovery SMS code sent to ${cleanPhone}. (Code: ${code})`);
-    setForgotTab('phone');
-    setLoading(false);
-  };
-
+  // 4. PASSWORD RESET HANDLER
   const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
     setInfoMessage(null);
 
-    try {
-      await sendPasswordResetEmail(auth, email);
-      setInfoMessage('Password reset email dispatched! Check your inbox for recovery link.');
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'Recovery email dispatch failed.');
-    } finally {
-      setLoading(false);
+    const cleanEmail = resetEmail.trim();
+    if (!cleanEmail || !isValidEmail(cleanEmail)) {
+      setError('Please enter a valid registered email address.');
+      return;
     }
-  };
 
-  const triggerResendVerification = async () => {
     setLoading(true);
-    setError(null);
+
     try {
-      if (auth.currentUser) {
-        await sendEmailVerification(auth.currentUser);
-        setInfoMessage('New verification key dispatched!');
-      } else {
-        setError('No active session. Please log in first.');
-        setMode('login');
-      }
+      await sendPasswordResetEmail(auth, cleanEmail);
+      setInfoMessage(`Password reset link sent successfully to ${cleanEmail}. Please check your inbox or spam folder.`);
     } catch (err: any) {
-      setError(err.message || 'Resend verification failed.');
+      console.error("Reset Password Error:", err);
+      if (err.code === 'auth/user-not-found') {
+        setError('No account found matching this email address.');
+      } else {
+        setError(err.message || 'Failed to send password reset email.');
+      }
     } finally {
       setLoading(false);
     }
@@ -479,317 +520,347 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
 
   return (
     <div className="min-h-screen bg-[#070B13] flex items-center justify-center p-4 relative overflow-hidden font-sans select-none">
-      {/* Background ambient mesh */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(6,182,212,0.1),transparent_40%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(139,92,246,0.1),transparent_40%)]" />
+      {/* Ambient Glow */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(139,92,246,0.15),transparent_50%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(6,182,212,0.15),transparent_50%)]" />
       
-      {/* Container card */}
-      <div className="w-full max-w-md bg-[#0A0F1D]/80 border border-slate-900 rounded-2xl p-6 md:p-8 backdrop-blur-xl shadow-2xl relative z-10" id="auth-card">
+      {/* Main Authentication Card */}
+      <div className="w-full max-w-md bg-[#0A0F1D]/95 border border-purple-500/20 rounded-3xl p-6 sm:p-8 backdrop-blur-2xl shadow-2xl relative z-10 my-8">
         
-        {/* Header logo / branding */}
-        <div className="text-center mb-6">
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-cyan-500 via-indigo-600 to-violet-600 flex items-center justify-center shadow-lg shadow-cyan-950/40 border border-cyan-400/20 mb-3">
-            <Fingerprint className="w-7 h-7 text-slate-100 animate-pulse" />
-          </div>
-          <h2 className="text-xl font-black text-slate-100 tracking-tight font-sans">
-            AURA <span className="text-cyan-400 font-mono text-xs">v3.0.0</span>
-          </h2>
-          <p className="text-slate-400 text-xs font-mono mt-1">Sovereign Social & Creative Platform</p>
-          
-          <div className="mt-3 p-2 rounded-xl bg-cyan-950/30 border border-cyan-800/40 text-[10px] text-cyan-300 font-sans leading-relaxed">
-            ✨ Built on values of <strong>Honesty, Kindness, Hope, Peace, Unity, Love, Integrity & Service</strong> — welcoming all users.
-          </div>
+        {/* Quick Source Code Download Button in Auth Header */}
+        <div className="flex justify-end mb-2">
+          <button
+            type="button"
+            onClick={handleDownloadSourceZip}
+            disabled={downloadingZip}
+            className={`px-3 py-1.5 rounded-xl border text-[11px] font-mono font-bold transition flex items-center gap-1.5 shadow-sm active:scale-95 ${
+              zipSuccessMessage
+                ? 'bg-emerald-950/80 border-emerald-500/60 text-emerald-300'
+                : downloadingZip
+                ? 'bg-cyan-950/80 border-cyan-500/60 text-cyan-300 animate-pulse'
+                : 'bg-slate-900/90 hover:bg-slate-850 border-purple-500/30 text-purple-200 hover:text-white hover:border-purple-400'
+            }`}
+            title="Download full project source code ZIP archive"
+          >
+            {zipSuccessMessage ? (
+              <>
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Downloaded ZIP!</span>
+              </>
+            ) : downloadingZip ? (
+              <>
+                <div className="w-3 h-3 border-2 border-cyan-300 border-t-transparent rounded-full animate-spin" />
+                <span>Zipping {zipProgress}%</span>
+              </>
+            ) : (
+              <>
+                <Download className="w-3.5 h-3.5 text-purple-400" />
+                <span>Download Source ZIP</span>
+              </>
+            )}
+          </button>
         </div>
 
-        {/* Error and Alert Indicators */}
+        {/* Brand Header */}
+        <div className="text-center mb-6">
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-purple-950/50 border border-purple-400/30 mb-3">
+            <Sparkles className="w-7 h-7 text-white animate-pulse" />
+          </div>
+          <h2 className="text-2xl font-black text-white tracking-tight font-sans uppercase">
+            AURA
+          </h2>
+          <p className="text-slate-400 text-xs mt-1">Social & AI Network</p>
+        </div>
+
+        {/* Auth Tabs (Sign In / Sign Up) */}
+        {mode !== 'forgot' && (
+          <div className="flex bg-slate-950/80 p-1 rounded-2xl border border-slate-800/80 mb-6 font-mono text-xs font-bold">
+            <button
+              type="button"
+              onClick={() => { setMode('login'); setError(null); setInfoMessage(null); }}
+              className={`flex-1 py-2.5 rounded-xl transition text-center ${
+                mode === 'login'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              LOG IN
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMode('signup'); setError(null); setInfoMessage(null); }}
+              className={`flex-1 py-2.5 rounded-xl transition text-center ${
+                mode === 'signup'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              CREATE ACCOUNT
+            </button>
+          </div>
+        )}
+
+        {/* Error Alert Box */}
         {error && (
-          <div className="mb-4 p-3.5 rounded-lg bg-red-950/40 border border-red-900/60 flex items-start gap-2 text-red-200 text-xs font-mono" id="auth-error-alert">
-            <AlertCircle className="w-4.5 h-4.5 text-red-400 shrink-0 mt-0.5" />
-            <span>{error}</span>
+          <div className="mb-5 p-3.5 rounded-2xl bg-red-950/60 border border-red-800/70 flex items-start gap-2.5 text-red-200 text-xs font-sans animate-fadeIn">
+            <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+            <div className="leading-relaxed w-full">{error}</div>
           </div>
         )}
 
+        {/* Info Alert Box */}
         {infoMessage && (
-          <div className="mb-4 p-3.5 rounded-lg bg-emerald-950/40 border border-emerald-900/60 flex items-start gap-2 text-emerald-200 text-xs font-mono" id="auth-info-alert">
+          <div className="mb-5 p-3.5 rounded-2xl bg-emerald-950/50 border border-emerald-800/60 flex items-start gap-2.5 text-emerald-200 text-xs font-sans animate-fadeIn">
             <CheckCircle className="w-4.5 h-4.5 text-emerald-400 shrink-0 mt-0.5" />
-            <span>{infoMessage}</span>
+            <span className="leading-relaxed">{infoMessage}</span>
           </div>
         )}
 
-        {/* MODE: Phone OTP Verification Gate */}
-        {mode === 'verify' && (
-          <form onSubmit={handleVerifyOtp} className="space-y-5 text-center">
-            <div className="w-12 h-12 rounded-full bg-cyan-950/80 border border-cyan-500/40 flex items-center justify-center mx-auto text-cyan-400">
-              <Phone className="w-6 h-6 animate-pulse" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-100 font-sans uppercase">Verify Phone Number</h3>
-              <p className="text-xs text-slate-400 mt-1 font-sans leading-relaxed">
-                Enter the 6-digit OTP SMS verification code sent to <strong className="text-cyan-300">{otpSentPhone || phoneNumberInput || 'your phone'}</strong>.
-              </p>
-            </div>
-
-            <div className="space-y-1 text-left">
-              <label className="text-[10px] font-mono text-cyan-400 uppercase tracking-widest block">6-Digit SMS OTP Code</label>
-              <div className="relative">
-                <Key className="absolute left-3 top-3 w-4 h-4 text-cyan-500" />
-                <input
-                  type="text"
-                  required
-                  maxLength={6}
-                  value={otpCodeInput}
-                  onChange={e => setOtpCodeInput(e.target.value)}
-                  placeholder="Enter 6-digit code"
-                  className="w-full bg-slate-950 border border-cyan-900/60 focus:border-cyan-400 rounded-lg py-2.5 pl-10 pr-4 text-sm text-cyan-300 placeholder-slate-600 focus:outline-none font-mono tracking-widest text-center"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-2.5 bg-gradient-to-r from-cyan-500 to-violet-600 hover:from-cyan-600 hover:to-violet-700 text-slate-100 font-bold rounded-lg text-xs tracking-wider font-mono transition shadow-lg shadow-cyan-950/40"
-              >
-                {loading ? 'VERIFYING CODE...' : 'VERIFY & CREATE AURA ACCOUNT'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode('signup')}
-                className="w-full text-slate-500 hover:text-slate-300 text-[11px] font-mono transition"
-              >
-                RETURN TO SIGNUP
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* MODE: Login */}
+        {/* ================= MODE: LOG IN ================= */}
         {mode === 'login' && (
           <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-1">
-              <label className="text-[10px] font-mono text-slate-500 uppercase tracking-widest block">Core Address (Email)</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-300 block">Email Address</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
+                <Mail className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-500" />
                 <input
                   type="email"
                   required
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="node@aura.net"
-                  className="w-full bg-slate-950 border border-slate-900 focus:border-cyan-500 rounded-lg py-2.5 pl-10 pr-4 text-xs text-slate-200 placeholder-slate-600 focus:outline-none font-mono"
+                  value={loginEmail}
+                  onChange={e => setLoginEmail(e.target.value)}
+                  placeholder="your.email@example.com"
+                  className="w-full bg-slate-950/90 border border-slate-800 focus:border-purple-500 rounded-xl py-3 pl-10 pr-4 text-xs text-slate-100 placeholder-slate-600 focus:outline-none transition"
                 />
               </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-[10px] font-mono text-cyan-400 uppercase tracking-widest block">
-                Name You Want To Answer In App (Optional)
-              </label>
-              <div className="relative">
-                <UserIcon className="absolute left-3 top-3 w-4 h-4 text-cyan-500" />
-                <input
-                  type="text"
-                  value={loginCustomName}
-                  onChange={e => setLoginCustomName(e.target.value)}
-                  placeholder="Full Name"
-                  className="w-full bg-slate-950 border border-cyan-900/60 focus:border-cyan-400 rounded-lg py-2.5 pl-10 pr-4 text-xs text-cyan-200 placeholder-slate-600 focus:outline-none font-mono"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <div className="flex justify-between items-center">
-                <label className="text-[10px] font-mono text-slate-500 uppercase tracking-widest block">Symmetric Passcode</label>
+                <label className="text-xs font-semibold text-slate-300 block">Password</label>
                 <button
                   type="button"
-                  onClick={() => setMode('forgot')}
-                  className="text-[10px] font-mono text-cyan-400 hover:text-cyan-300 transition"
+                  onClick={() => { setMode('forgot'); setError(null); setInfoMessage(null); }}
+                  className="text-xs font-mono text-purple-400 hover:text-purple-300 transition"
                 >
-                  FORGOT CODE?
+                  Forgot password?
                 </button>
               </div>
               <div className="relative">
-                <Lock className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
+                <Lock className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-500" />
                 <input
-                  type="password"
+                  type={showLoginPassword ? 'text' : 'password'}
                   required
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
-                  className="w-full bg-slate-950 border border-slate-900 focus:border-cyan-500 rounded-lg py-2.5 pl-10 pr-4 text-xs text-slate-200 placeholder-slate-600 focus:outline-none font-mono"
+                  value={loginPassword}
+                  onChange={e => setLoginPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="w-full bg-slate-950/90 border border-slate-800 focus:border-purple-500 rounded-xl py-3 pl-10 pr-10 text-xs text-slate-100 placeholder-slate-600 focus:outline-none transition"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowLoginPassword(!showLoginPassword)}
+                  className="absolute right-3.5 top-3.5 text-slate-500 hover:text-slate-300 transition"
+                >
+                  {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 mt-2 bg-gradient-to-r from-cyan-500 to-violet-600 hover:from-cyan-600 hover:to-violet-700 text-slate-100 font-bold rounded-lg text-xs tracking-wider font-mono transition shadow-lg shadow-cyan-950/40 flex items-center justify-center gap-2"
-              id="login-btn"
+              className="w-full py-3 mt-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-xl text-xs tracking-wider uppercase font-mono transition shadow-lg shadow-purple-950/50 flex items-center justify-center gap-2 hover:scale-[1.01] disabled:opacity-50"
             >
-              {loading ? 'DECRYPTING...' : 'INITIALIZE SESSION'}
-              <ArrowRight className="w-3.5 h-3.5" />
+              {loading ? (
+                <span>LOGGING IN...</span>
+              ) : (
+                <>
+                  <span>LOG IN</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
 
-            <div className="relative my-6 flex items-center justify-center">
-              <div className="border-t border-slate-900 w-full" />
-              <span className="bg-[#0A0F1D] px-3 text-[9px] text-slate-500 font-mono uppercase tracking-widest absolute">Or Mesh Proxy</span>
+            {/* Divider */}
+            <div className="relative my-5 flex items-center justify-center">
+              <div className="border-t border-slate-800 w-full" />
+              <span className="bg-[#0A0F1D] px-3 text-[10px] text-slate-500 font-mono uppercase tracking-wider absolute">OR</span>
             </div>
 
+            {/* Google Sign-In Button */}
             <button
               type="button"
               onClick={handleGoogleSignIn}
               disabled={loading}
-              className="w-full py-2.5 bg-slate-950 hover:bg-slate-900 border border-slate-900 rounded-lg text-xs text-slate-300 font-mono transition flex items-center justify-center gap-2 shadow mb-2"
+              className="w-full py-3 bg-slate-950 hover:bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-200 font-medium transition flex items-center justify-center gap-3 shadow hover:border-slate-700 disabled:opacity-50"
             >
-              <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24">
+              <svg className="w-4.5 h-4.5" viewBox="0 0 24 24">
                 <path fill="#EA4335" d="M12 5.04c1.66 0 3.2.57 4.38 1.69l3.27-3.27C17.67 1.54 15.02 1 12 1 7.24 1 3.22 3.73 1.34 7.73l3.85 3C6.1 7.7 8.84 5.04 12 5.04z"/>
                 <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.36H12v4.47h6.43c-.28 1.47-1.11 2.71-2.36 3.55v2.95h3.81c2.23-2.05 3.61-5.07 3.61-8.61z"/>
                 <path fill="#FBBC05" d="M5.19 14.24c-.24-.73-.38-1.5-.38-2.3s.14-1.57.38-2.3L1.34 6.64C.49 8.25 0 10.07 0 12s.49 3.75 1.34 5.36l3.85-3.12z"/>
                 <path fill="#34A853" d="M12 23c3.24 0 5.97-1.07 7.96-2.92l-3.81-2.95c-1.05.7-2.4 1.13-4.15 1.13-3.16 0-5.9-2.66-6.81-5.69l-3.85 3C3.22 20.27 7.24 23 12 23z"/>
               </svg>
-              Google Sign-In
+              <span>CONTINUE WITH GOOGLE</span>
             </button>
-
-            <button
-              type="button"
-              onClick={handleFacebookSignIn}
-              disabled={loading}
-              className="w-full py-2.5 bg-slate-950 hover:bg-[#1877F2]/10 hover:border-[#1877F2]/30 border border-slate-900 rounded-lg text-xs text-slate-300 font-mono transition flex items-center justify-center gap-2 shadow mb-2"
-            >
-              <Facebook className="w-4 h-4 text-[#1877F2]" />
-              Facebook Sign-In
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setShowPhoneLogin(!showPhoneLogin)}
-              disabled={loading}
-              className="w-full py-2.5 bg-slate-950 hover:bg-emerald-950/30 border border-emerald-900/40 rounded-lg text-xs text-emerald-300 font-mono transition flex items-center justify-center gap-2 shadow mb-2"
-            >
-              <Phone className="w-4 h-4 text-emerald-400" />
-              {showPhoneLogin ? "Hide Phone Access" : "Phone Number Login"}
-            </button>
-
-            {showPhoneLogin && (
-              <form onSubmit={handlePhoneSignInSubmit} className="bg-emerald-950/20 border border-emerald-500/30 p-3.5 rounded-xl space-y-2.5 my-2 animate-fadeIn">
-                <div className="flex items-center justify-between text-[10px] font-mono text-emerald-400">
-                  <span>Enter Phone Number for Peer Access</span>
-                  <span className="text-emerald-400 font-bold">Aura Phone Network</span>
-                </div>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-2.5 w-4 h-4 text-emerald-500" />
-                  <input
-                    type="tel"
-                    value={phoneNumberInput}
-                    onChange={(e) => setPhoneNumberInput(e.target.value)}
-                    placeholder="Phone Number (+country code)"
-                    className="w-full bg-slate-950 border border-emerald-900/60 focus:border-emerald-400 text-xs text-emerald-300 font-mono rounded-lg py-2 pl-9 pr-3 focus:outline-none"
-                    required
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-slate-100 font-mono text-[11px] font-bold uppercase tracking-wider rounded-lg transition"
-                >
-                  {loading ? "Verifying Phone..." : "Login With Phone Number"}
-                </button>
-              </form>
-            )}
-
-            <button
-              type="button"
-              onClick={handleSimulatedFacebookSignIn}
-              disabled={loading}
-              className="w-full py-2.5 bg-gradient-to-r from-blue-950/40 to-indigo-950/40 hover:from-blue-900/40 hover:to-indigo-900/40 border border-blue-900/40 rounded-lg text-[11px] text-blue-300 font-mono transition flex items-center justify-center gap-2 shadow"
-            >
-              <Facebook className="w-4 h-4 text-cyan-400 shrink-0" />
-              Bypass: Admin Identity Checkpoint
-            </button>
-
-            <p className="text-center text-[10px] text-slate-500 font-mono mt-4">
-              NEW PEER ON THE SWARM?{' '}
-              <button
-                type="button"
-                onClick={() => setMode('signup')}
-                className="text-cyan-400 hover:text-cyan-300 transition underline"
-              >
-                COMPILE NEW NODE
-              </button>
-            </p>
           </form>
         )}
 
-        {/* MODE: Sign Up */}
+        {/* ================= MODE: CREATE ACCOUNT ================= */}
         {mode === 'signup' && (
-          <form onSubmit={handleSignup} className="space-y-4">
-            <div className="bg-cyan-950/20 border border-cyan-800/40 p-3 rounded-xl text-[11px] text-cyan-300 font-sans space-y-1">
-              <div className="font-bold flex items-center gap-1">
-                <Phone className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Create Aura Account</span>
-              </div>
-              <p className="text-slate-400 text-[10px]">
-                Enter your phone number, display name, and password. An SMS OTP code will be sent to verify your phone number.
-              </p>
-            </div>
-
+          <form onSubmit={handleSignup} className="space-y-3.5">
+            {/* 1. Full Name */}
             <div className="space-y-1">
-              <label className="text-[10px] font-mono text-cyan-400 uppercase tracking-widest block">Phone Number (Required)</label>
+              <label className="text-xs font-semibold text-slate-300 block">Full Name</label>
               <div className="relative">
-                <Phone className="absolute left-3 top-3 w-4 h-4 text-cyan-500" />
-                <input
-                  type="tel"
-                  required
-                  value={phoneNumberInput}
-                  onChange={e => setPhoneNumberInput(e.target.value)}
-                  placeholder="Phone Number (+country code)"
-                  className="w-full bg-slate-950 border border-slate-900 focus:border-cyan-500 rounded-lg py-2.5 pl-10 pr-4 text-xs text-slate-200 placeholder-slate-600 focus:outline-none font-mono"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-[10px] font-mono text-slate-500 uppercase tracking-widest block">Display Name (Required)</label>
-              <div className="relative">
-                <UserIcon className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
+                <UserIcon className="absolute left-3.5 top-3 w-4 h-4 text-slate-500" />
                 <input
                   type="text"
                   required
-                  value={displayNameInput}
-                  onChange={e => setDisplayNameInput(e.target.value)}
-                  placeholder="Display Name"
-                  className="w-full bg-slate-950 border border-slate-900 focus:border-cyan-500 rounded-lg py-2.5 pl-10 pr-4 text-xs text-slate-200 placeholder-slate-600 focus:outline-none font-mono"
+                  value={fullName}
+                  onChange={e => setFullName(e.target.value)}
+                  placeholder="e.g. Princewill Geleteye"
+                  className="w-full bg-slate-950/90 border border-slate-800 focus:border-purple-500 rounded-xl py-2.5 pl-10 pr-4 text-xs text-slate-100 placeholder-slate-600 focus:outline-none transition"
                 />
               </div>
             </div>
 
+            {/* 2. Username */}
             <div className="space-y-1">
-              <label className="text-[10px] font-mono text-slate-500 uppercase tracking-widest block">Password (Min 6 chars)</label>
+              <label className="text-xs font-semibold text-slate-300 block">Username</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
+                <AtSign className="absolute left-3.5 top-3 w-4 h-4 text-purple-400" />
                 <input
-                  type="password"
+                  type="text"
                   required
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
-                  className="w-full bg-slate-950 border border-slate-900 focus:border-cyan-500 rounded-lg py-2.5 pl-10 pr-4 text-xs text-slate-200 placeholder-slate-600 focus:outline-none font-mono"
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
+                  placeholder="e.g. princewill_72"
+                  className="w-full bg-slate-950/90 border border-slate-800 focus:border-purple-500 rounded-xl py-2.5 pl-10 pr-4 text-xs text-purple-300 font-mono placeholder-slate-600 focus:outline-none transition"
                 />
               </div>
             </div>
 
+            {/* 3. Email Address */}
             <div className="space-y-1">
-              <label className="text-[10px] font-mono text-slate-600 uppercase tracking-widest block">Email Address (Optional Backup)</label>
+              <label className="text-xs font-semibold text-slate-300 block">Email Address</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-3 w-4 h-4 text-slate-600" />
+                <Mail className="absolute left-3.5 top-3 w-4 h-4 text-slate-500" />
                 <input
                   type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="user@aura.app (optional)"
-                  className="w-full bg-slate-950 border border-slate-900 focus:border-cyan-500 rounded-lg py-2.5 pl-10 pr-4 text-xs text-slate-200 placeholder-slate-600 focus:outline-none font-mono"
+                  required
+                  value={signupEmail}
+                  onChange={e => setSignupEmail(e.target.value)}
+                  placeholder="name@example.com"
+                  className="w-full bg-slate-950/90 border border-slate-800 focus:border-purple-500 rounded-xl py-2.5 pl-10 pr-4 text-xs text-slate-100 placeholder-slate-600 focus:outline-none transition"
+                />
+              </div>
+            </div>
+
+            {/* 4. Password */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-300 block">Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-3 w-4 h-4 text-slate-500" />
+                <input
+                  type={showSignupPassword ? 'text' : 'password'}
+                  required
+                  value={signupPassword}
+                  onChange={e => setSignupPassword(e.target.value)}
+                  placeholder="At least 6 characters"
+                  className="w-full bg-slate-950/90 border border-slate-800 focus:border-purple-500 rounded-xl py-2.5 pl-10 pr-10 text-xs text-slate-100 placeholder-slate-600 focus:outline-none transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowSignupPassword(!showSignupPassword)}
+                  className="absolute right-3.5 top-3 text-slate-500 hover:text-slate-300 transition"
+                >
+                  {showSignupPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* 5. Confirm Password */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-300 block">Confirm Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-3 w-4 h-4 text-slate-500" />
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  required
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter your password"
+                  className="w-full bg-slate-950/90 border border-slate-800 focus:border-purple-500 rounded-xl py-2.5 pl-10 pr-10 text-xs text-slate-100 placeholder-slate-600 focus:outline-none transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3.5 top-3 text-slate-500 hover:text-slate-300 transition"
+                >
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 mt-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-xl text-xs tracking-wider uppercase font-mono transition shadow-lg shadow-purple-950/50 flex items-center justify-center gap-2 hover:scale-[1.01] disabled:opacity-50"
+            >
+              {loading ? (
+                <span>CREATING ACCOUNT...</span>
+              ) : (
+                <>
+                  <span>CREATE ACCOUNT</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+
+            {/* Divider */}
+            <div className="relative my-4 flex items-center justify-center">
+              <div className="border-t border-slate-800 w-full" />
+              <span className="bg-[#0A0F1D] px-3 text-[10px] text-slate-500 font-mono uppercase tracking-wider absolute">OR</span>
+            </div>
+
+            {/* Google Sign-In Button */}
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+              className="w-full py-3 bg-slate-950 hover:bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-200 font-medium transition flex items-center justify-center gap-3 shadow hover:border-slate-700 disabled:opacity-50"
+            >
+              <svg className="w-4.5 h-4.5" viewBox="0 0 24 24">
+                <path fill="#EA4335" d="M12 5.04c1.66 0 3.2.57 4.38 1.69l3.27-3.27C17.67 1.54 15.02 1 12 1 7.24 1 3.22 3.73 1.34 7.73l3.85 3C6.1 7.7 8.84 5.04 12 5.04z"/>
+                <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.36H12v4.47h6.43c-.28 1.47-1.11 2.71-2.36 3.55v2.95h3.81c2.23-2.05 3.61-5.07 3.61-8.61z"/>
+                <path fill="#FBBC05" d="M5.19 14.24c-.24-.73-.38-1.5-.38-2.3s.14-1.57.38-2.3L1.34 6.64C.49 8.25 0 10.07 0 12s.49 3.75 1.34 5.36l3.85-3.12z"/>
+                <path fill="#34A853" d="M12 23c3.24 0 5.97-1.07 7.96-2.92l-3.81-2.95c-1.05.7-2.4 1.13-4.15 1.13-3.16 0-5.9-2.66-6.81-5.69l-3.85 3C3.22 20.27 7.24 23 12 23z"/>
+              </svg>
+              <span>CONTINUE WITH GOOGLE</span>
+            </button>
+          </form>
+        )}
+
+        {/* ================= MODE: FORGOT PASSWORD ================= */}
+        {mode === 'forgot' && (
+          <form onSubmit={handlePasswordReset} className="space-y-4">
+            <div className="text-center mb-2">
+              <h3 className="text-sm font-bold text-white font-sans uppercase">Reset Your Password</h3>
+              <p className="text-xs text-slate-400 mt-1">
+                Enter your registered email address and we'll send you a password reset link.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-300 block">Registered Email Address</label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-500" />
+                <input
+                  type="email"
+                  required
+                  value={resetEmail}
+                  onChange={e => setResetEmail(e.target.value)}
+                  placeholder="your.email@example.com"
+                  className="w-full bg-slate-950/90 border border-slate-800 focus:border-purple-500 rounded-xl py-3 pl-10 pr-4 text-xs text-slate-100 placeholder-slate-600 focus:outline-none transition"
                 />
               </div>
             </div>
@@ -797,174 +868,19 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 mt-2 bg-gradient-to-r from-cyan-500 to-violet-600 hover:from-cyan-600 hover:to-violet-700 text-slate-100 font-bold rounded-lg text-xs tracking-wider font-mono transition shadow-lg shadow-cyan-950/40 flex items-center justify-center gap-2"
-              id="signup-btn"
+              className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-xl text-xs tracking-wider uppercase font-mono transition shadow-lg shadow-purple-950/50 flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              <Phone className="w-4 h-4" />
-              <span>{loading ? 'SENDING OTP...' : 'VERIFY PHONE & SIGN UP'}</span>
+              {loading ? 'SENDING RESET LINK...' : 'SEND RESET LINK'}
             </button>
 
-            <p className="text-center text-[10px] text-slate-500 font-mono mt-4">
-              ALREADY HAVE AN AURA ACCOUNT?{' '}
-              <button
-                type="button"
-                onClick={() => setMode('login')}
-                className="text-cyan-400 hover:text-cyan-300 transition underline"
-              >
-                SIGN IN HERE
-              </button>
-            </p>
+            <button
+              type="button"
+              onClick={() => { setMode('login'); setError(null); setInfoMessage(null); }}
+              className="w-full text-center text-xs font-mono text-purple-400 hover:text-purple-300 transition block mt-2"
+            >
+              ← Back to Log In
+            </button>
           </form>
-        )}
-
-        {/* MODE: Forgot Password / Recovery Protocol */}
-        {mode === 'forgot' && (
-          <div className="space-y-4">
-            <div className="flex border-b border-slate-900 font-mono text-xs">
-              <button
-                type="button"
-                onClick={() => setForgotTab('phone')}
-                className={`flex-1 py-2 text-center border-b-2 font-bold transition ${
-                  forgotTab === 'phone' ? 'border-cyan-400 text-cyan-300' : 'border-transparent text-slate-500 hover:text-slate-300'
-                }`}
-              >
-                SMS Phone
-              </button>
-              <button
-                type="button"
-                onClick={() => setForgotTab('email')}
-                className={`flex-1 py-2 text-center border-b-2 font-bold transition ${
-                  forgotTab === 'email' ? 'border-cyan-400 text-cyan-300' : 'border-transparent text-slate-500 hover:text-slate-300'
-                }`}
-              >
-                Email
-              </button>
-              <button
-                type="button"
-                onClick={() => setForgotTab('key')}
-                className={`flex-1 py-2 text-center border-b-2 font-bold transition ${
-                  forgotTab === 'key' ? 'border-cyan-400 text-cyan-300' : 'border-transparent text-slate-500 hover:text-slate-300'
-                }`}
-              >
-                Backup Key
-              </button>
-            </div>
-
-            {forgotTab === 'phone' && (
-              <form onSubmit={handlePhonePasswordRecovery} className="space-y-3">
-                <p className="text-[11px] text-slate-400 font-sans leading-relaxed">
-                  Enter your registered phone number to receive an SMS recovery verification code.
-                </p>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-mono text-slate-500 uppercase tracking-widest block">Phone Number</label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-3 w-4 h-4 text-cyan-500" />
-                    <input
-                      type="tel"
-                      required
-                      value={recoveryPhoneInput}
-                      onChange={e => setRecoveryPhoneInput(e.target.value)}
-                      placeholder="Recovery Phone Number"
-                      className="w-full bg-slate-950 border border-slate-900 focus:border-cyan-500 rounded-lg py-2.5 pl-10 pr-4 text-xs text-cyan-300 font-mono placeholder-slate-600 focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-2.5 mt-2 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-600 hover:to-indigo-700 text-slate-100 font-bold rounded-lg text-xs tracking-wider font-mono transition shadow-lg shadow-cyan-950/40"
-                >
-                  {loading ? 'SENDING CODE...' : 'SEND SMS RECOVERY CODE'}
-                </button>
-              </form>
-            )}
-
-            {forgotTab === 'key' ? (
-              <form 
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (!recoveryKeyInput.trim()) return;
-                  const storedKey = localStorage.getItem('aura_secondary_recovery_key');
-                  if (recoveryKeyInput.trim().toUpperCase() === storedKey || recoveryKeyInput.trim().length >= 10) {
-                    setInfoMessage("✅ Secondary Recovery Key Verified! Identity session unlocked. Please proceed with setting your new password.");
-                    setTimeout(() => {
-                      onAuthSuccess('recovered_peer_node', 'recovered_peer', 'https://api.dicebear.com/7.x/bottts/svg?seed=recovered', email || 'recovered@aura.node');
-                    }, 1200);
-                  } else {
-                    setError("Invalid Secondary Recovery Key provided. Please check your backup string.");
-                  }
-                }}
-                className="space-y-3"
-              >
-                <p className="text-[11px] text-slate-400 font-mono leading-relaxed">
-                  Enter your 16-character Secondary Master Recovery Key to bypass password checks and recover account access immediately.
-                </p>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-mono text-slate-500 uppercase tracking-widest block">Secondary Recovery Key</label>
-                  <div className="relative">
-                    <Key className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
-                    <input
-                      type="text"
-                      required
-                      value={recoveryKeyInput}
-                      onChange={e => setRecoveryKeyInput(e.target.value)}
-                      placeholder="AURA-SEC-XXXX-XXXX"
-                      className="w-full bg-slate-950 border border-slate-900 focus:border-cyan-500 rounded-lg py-2.5 pl-10 pr-4 text-xs text-cyan-300 font-mono tracking-widest placeholder-slate-600 focus:outline-none uppercase"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-2.5 mt-2 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-600 hover:to-indigo-700 text-slate-100 font-bold rounded-lg text-xs tracking-wider font-mono transition shadow-lg shadow-cyan-950/40"
-                >
-                  {loading ? 'VERIFYING KEY...' : 'UNLOCK SESSION WITH RECOVERY KEY'}
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={handlePasswordReset} className="space-y-4">
-                <p className="text-[11px] text-slate-400 font-mono leading-relaxed">
-                  Provide your registered Core Email Address to trigger an automated verification email link.
-                </p>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-mono text-slate-500 uppercase tracking-widest block">Core Address (Email)</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={e => setEmail(e.target.value)}
-                      placeholder="node@aura.net"
-                      className="w-full bg-slate-950 border border-slate-900 focus:border-cyan-500 rounded-lg py-2.5 pl-10 pr-4 text-xs text-slate-200 placeholder-slate-600 focus:outline-none font-mono"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-2.5 mt-2 bg-gradient-to-r from-cyan-500 to-violet-600 hover:from-cyan-600 hover:to-violet-700 text-slate-100 font-bold rounded-lg text-xs tracking-wider font-mono transition shadow-lg shadow-cyan-950/40"
-                >
-                  {loading ? 'DISPATCHING RECOVERY...' : 'DISPATCH RECOVERY PROTOCOL'}
-                </button>
-              </form>
-            )}
-
-            <p className="text-center text-[10px] text-slate-500 font-mono mt-4">
-              <button
-                type="button"
-                onClick={() => setMode('login')}
-                className="text-cyan-400 hover:text-cyan-300 transition underline"
-              >
-                RETURN TO SESSION GATEWAY
-              </button>
-            </p>
-          </div>
         )}
 
       </div>

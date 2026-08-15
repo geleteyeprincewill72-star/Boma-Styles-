@@ -235,6 +235,9 @@ export default function FeedSection({
     localStorage.setItem('aura_reported_posts', JSON.stringify(Array.from(reportedPostIds)));
   }, [reportedPostIds]);
   
+  // Feed Sorting state
+  const [sortOption, setSortOption] = useState<'newest' | 'popular' | 'most_liked' | 'most_commented' | 'bookmarked_first'>('newest');
+
   // Comment input states
   const [commentTexts, setCommentTexts] = useState<{ [key: string]: string }>({});
 
@@ -725,6 +728,28 @@ export default function FeedSection({
     });
   }
 
+  // 3. Apply Feed Sorting Options
+  processedPosts = [...processedPosts].sort((a, b) => {
+    if (sortOption === 'popular') {
+      const scoreA = (a.likes || 0) * 2 + (a.commentsCount || 0) * 3;
+      const scoreB = (b.likes || 0) * 2 + (b.commentsCount || 0) * 3;
+      return scoreB - scoreA;
+    }
+    if (sortOption === 'most_liked') {
+      return (b.likes || 0) - (a.likes || 0);
+    }
+    if (sortOption === 'most_commented') {
+      return (b.commentsCount || 0) - (a.commentsCount || 0);
+    }
+    if (sortOption === 'bookmarked_first') {
+      const isBMa = bookmarkedPostIds.has(a.id) ? 1 : 0;
+      const isBMb = bookmarkedPostIds.has(b.id) ? 1 : 0;
+      if (isBMa !== isBMb) return isBMb - isBMa;
+    }
+    // Default: Newest / Latest
+    return (b.timestamp || 0) - (a.timestamp || 0);
+  });
+
   const filteredPosts = processedPosts;
 
   return (
@@ -1040,85 +1065,126 @@ export default function FeedSection({
           Downside: continuous swarm scroll
         </span>
 
-        {/* Protocol Filter Tabs */}
-        <div className="flex flex-wrap gap-2 p-1 bg-slate-950 rounded-xl border border-slate-900">
-          <button
-            onClick={() => setActiveTab('all')}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium font-mono transition duration-150 ${
-              activeTab === 'all' 
-                ? 'bg-slate-900 text-cyan-400 border border-slate-800' 
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            All Channels
-          </button>
-          <button
-            onClick={() => setActiveTab('micro')}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium font-mono transition duration-150 ${
-              activeTab === 'micro' 
-                ? 'bg-slate-900 text-cyan-400 border border-slate-800' 
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Feather className="w-3.5 h-3.5" />
-            Scribbles
-          </button>
-          <button
-            onClick={() => setActiveTab('media')}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium font-mono transition duration-150 ${
-              activeTab === 'media' 
-                ? 'bg-slate-900 text-cyan-400 border border-slate-800' 
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <ImageIcon className="w-3.5 h-3.5" />
-            Gallery
-          </button>
-          <button
-            onClick={() => setActiveTab('play')}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium font-mono transition duration-150 ${
-              activeTab === 'play' 
-                ? 'bg-slate-900 text-cyan-400 border border-slate-800' 
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Video className="w-3.5 h-3.5" />
-            Cinema
-          </button>
-          <button
-            onClick={() => setActiveTab('node')}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium font-mono transition duration-150 ${
-              activeTab === 'node' 
-                ? 'bg-slate-900 text-cyan-400 border border-slate-800' 
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Users className="w-3.5 h-3.5" />
-            Circles
-          </button>
-          <button
-            onClick={() => setActiveTab('voice')}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium font-mono transition duration-150 ${
-              activeTab === 'voice' 
-                ? 'bg-slate-900 text-cyan-400 border border-slate-800' 
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Mic className="w-3.5 h-3.5" />
-            Voice Notes
-          </button>
-          <button
-            onClick={() => setActiveTab('bookmarks')}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium font-mono transition duration-150 ${
-              activeTab === 'bookmarks' 
-                ? 'bg-slate-900 text-cyan-400 border border-slate-800' 
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Star className="w-3.5 h-3.5" />
-            Bookmarks
-          </button>
+        {/* Protocol Filter Tabs & Feed Sorting Bar */}
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 p-1 bg-slate-950 rounded-xl border border-slate-900">
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                onClick={() => setActiveTab('all')}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium font-mono transition duration-150 ${
+                  activeTab === 'all' 
+                    ? 'bg-slate-900 text-cyan-400 border border-slate-800' 
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                All Channels
+              </button>
+              <button
+                onClick={() => setActiveTab('micro')}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium font-mono transition duration-150 ${
+                  activeTab === 'micro' 
+                    ? 'bg-slate-900 text-cyan-400 border border-slate-800' 
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Feather className="w-3.5 h-3.5" />
+                Scribbles
+              </button>
+              <button
+                onClick={() => setActiveTab('media')}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium font-mono transition duration-150 ${
+                  activeTab === 'media' 
+                    ? 'bg-slate-900 text-cyan-400 border border-slate-800' 
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <ImageIcon className="w-3.5 h-3.5" />
+                Gallery
+              </button>
+              <button
+                onClick={() => setActiveTab('play')}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium font-mono transition duration-150 ${
+                  activeTab === 'play' 
+                    ? 'bg-slate-900 text-cyan-400 border border-slate-800' 
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Video className="w-3.5 h-3.5" />
+                Cinema
+              </button>
+              <button
+                onClick={() => setActiveTab('node')}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium font-mono transition duration-150 ${
+                  activeTab === 'node' 
+                    ? 'bg-slate-900 text-cyan-400 border border-slate-800' 
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                Circles
+              </button>
+              <button
+                onClick={() => setActiveTab('voice')}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium font-mono transition duration-150 ${
+                  activeTab === 'voice' 
+                    ? 'bg-slate-900 text-cyan-400 border border-slate-800' 
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Mic className="w-3.5 h-3.5" />
+                Voice Notes
+              </button>
+              <button
+                onClick={() => setActiveTab('bookmarks')}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium font-mono transition duration-150 ${
+                  activeTab === 'bookmarks' 
+                    ? 'bg-slate-900 text-amber-400 border border-amber-500/40 shadow' 
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Star className={`w-3.5 h-3.5 ${bookmarkedPostIds.size > 0 ? 'fill-amber-400 stroke-amber-400' : ''}`} />
+                <span>Bookmarks</span>
+                {bookmarkedPostIds.size > 0 && (
+                  <span className="ml-1 px-1.5 py-0.2 rounded-full bg-amber-950 border border-amber-500/50 text-amber-300 text-[10px] font-bold font-mono">
+                    {bookmarkedPostIds.size}
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Feed Sorting Options Bar */}
+          <div className="bg-slate-950/80 border border-slate-900 px-3 py-2 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+            <span className="text-slate-400 flex items-center gap-1.5 font-semibold text-[11px]">
+              <Sliders className="w-3.5 h-3.5 text-cyan-400" />
+              Feed Sort Order:
+            </span>
+
+            <div className="flex flex-wrap items-center gap-1.5">
+              {[
+                { id: 'newest', label: '⚡ Latest', tooltip: 'Sort by newest post timestamp' },
+                { id: 'popular', label: '🔥 Trending', tooltip: 'Sort by overall engagement score' },
+                { id: 'most_liked', label: '❤️ Most Liked', tooltip: 'Sort by highest like count' },
+                { id: 'most_commented', label: '💬 Most Discussed', tooltip: 'Sort by comment volume' },
+                { id: 'bookmarked_first', label: '⭐ Saved First', tooltip: 'Prioritize your saved bookmarks' }
+              ].map((so) => (
+                <button
+                  key={so.id}
+                  type="button"
+                  title={so.tooltip}
+                  onClick={() => setSortOption(so.id as any)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-mono transition ${
+                    sortOption === so.id
+                      ? 'bg-gradient-to-r from-cyan-950 to-indigo-950 border border-cyan-500/50 text-cyan-300 font-bold shadow'
+                      : 'bg-slate-900/60 border border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-850'
+                  }`}
+                >
+                  {so.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Scroll List */}

@@ -102,9 +102,22 @@
         "isWebSearchGrounded": { "type": "boolean" }
       },
       "required": ["id", "sender", "content", "timestamp"]
+    },
+    "TestConnection": {
+      "title": "TestConnection",
+      "description": "Firestore connection health check entity",
+      "type": "object",
+      "properties": {
+        "connected": { "type": "boolean" },
+        "timestamp": { "type": "number" }
+      }
     }
   },
   "firestore": {
+    "test/{testId}": {
+      "schema": "TestConnection",
+      "description": "Connection test path"
+    },
     "users/{userId}": {
       "schema": "User",
       "description": "Registered users profiles"

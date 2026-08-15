@@ -33,58 +33,94 @@ const FILES_TO_ZIP = [
   'src/utils/translations.ts',
   'src/utils/discoveryEngine.ts',
   'src/utils/zipExporter.ts',
-  'src/components/AdminDashboardSection.tsx',
-  'src/components/AuthScreen.tsx',
-  'src/components/WelcomeConsentModal.tsx',
-  'src/components/WelcomePrivacyModal.tsx',
-  'src/components/CreatorMonetization.tsx',
-  'src/components/BusinessAdsManager.tsx',
-  'src/components/GoogleAdSenseAd.tsx',
-  'src/components/AdMobAdComponent.tsx',
   'src/components/AdMobAd.tsx',
-  'src/components/PhoneAdaptationBanner.tsx',
-  'src/components/FeedSection.tsx',
-  'src/components/StudioSection.tsx',
-  'src/components/VideoHubSection.tsx',
-  'src/components/VideoTheaterSection.tsx',
+  'src/components/AdMobAdComponent.tsx',
+  'src/components/AdminDashboardSection.tsx',
+  'src/components/AdsterraAd.tsx',
+  'src/components/AppVersionNotifier.tsx',
+  'src/components/AuthScreen.tsx',
+  'src/components/BusinessAdsManager.tsx',
+  'src/components/CallsSection.tsx',
   'src/components/CinematicCanvasPlayer.tsx',
-  'src/components/SettingsModal.tsx',
-  'src/components/WalletSection.tsx',
-  'src/components/ReviewsSection.tsx',
-  'src/components/MessagingSection.tsx',
-  'src/components/NotificationsSection.tsx',
-  'src/components/SovereignDiscoverySection.tsx',
-  'src/components/MonetizationSection.tsx',
+  'src/components/CreatorMonetization.tsx',
+  'src/components/CreatorVideoAnalytics.tsx',
+  'src/components/CustomHlsPlayer.tsx',
   'src/components/DecentralizedIdentityModal.tsx',
   'src/components/DeviceSecurityModal.tsx',
-  'src/components/ModerationCouncilModal.tsx',
-  'src/components/PremiumFeaturesPanel.tsx',
-  'src/components/PwaInstallModal.tsx',
-  'src/components/OfflineTrialLockModal.tsx',
+  'src/components/ErrorBoundary.tsx',
+  'src/components/FeedSection.tsx',
   'src/components/FirstTimePostPreferenceModal.tsx',
-  'src/components/NetworkMap.tsx'
+  'src/components/FriendsSection.tsx',
+  'src/components/GoogleAdSenseAd.tsx',
+  'src/components/HomeScreen.tsx',
+  'src/components/MessagingSection.tsx',
+  'src/components/ModerationCouncilModal.tsx',
+  'src/components/MonetizationSection.tsx',
+  'src/components/MusicGenerator.tsx',
+  'src/components/NavigationSidebar.tsx',
+  'src/components/NetworkMap.tsx',
+  'src/components/NotificationsSection.tsx',
+  'src/components/OfflineTrialLockModal.tsx',
+  'src/components/OmniMindSection.tsx',
+  'src/components/PhoneAdaptationBanner.tsx',
+  'src/components/PremiumFeaturesPanel.tsx',
+  'src/components/ProfileSection.tsx',
+  'src/components/PwaInstallModal.tsx',
+  'src/components/ReviewsSection.tsx',
+  'src/components/SettingsModal.tsx',
+  'src/components/SovereignDiscoverySection.tsx',
+  'src/components/StudioSection.tsx',
+  'src/components/SubscriptionPlans.tsx',
+  'src/components/UserLocationTracker.tsx',
+  'src/components/VideoHubSection.tsx',
+  'src/components/VideoTheaterSection.tsx',
+  'src/components/VoiceConversation.tsx',
+  'src/components/VoicemailSystem.tsx',
+  'src/components/WalletSection.tsx',
+  'src/components/WebInstallBanner.tsx',
+  'src/components/WelcomeConsentModal.tsx',
+  'src/components/WelcomePrivacyModal.tsx'
 ];
 
 export async function exportRepositoryAsZip(
   currentAppTsxOverride?: string,
   onProgress?: (progress: number) => void
 ): Promise<void> {
-  const zip = new JSZip();
+  onProgress?.(10);
+  try {
+    // Attempt high-speed server zip download first if available
+    const serverResp = await fetch('/api/download-source-zip');
+    if (serverResp.ok) {
+      onProgress?.(60);
+      const blob = await serverResp.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const downloadLink = document.createElement('a');
+      downloadLink.href = downloadUrl;
+      downloadLink.download = 'aura-source-code.zip';
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      URL.revokeObjectURL(downloadUrl);
+      onProgress?.(100);
+      return;
+    }
+  } catch (err) {
+    console.warn("Direct server zip endpoint fallback to client generator:", err);
+  }
 
+  const zip = new JSZip();
   let completed = 0;
-  onProgress?.(5);
+  onProgress?.(15);
 
   for (const filePath of FILES_TO_ZIP) {
     try {
-      // If we have an in-memory override for App.tsx (unsaved changes or active state), use it
       if (filePath === 'src/App.tsx' && currentAppTsxOverride) {
         zip.file(filePath, currentAppTsxOverride);
         completed++;
-        onProgress?.(Math.round((completed / FILES_TO_ZIP.length) * 90) + 5);
+        onProgress?.(Math.round((completed / FILES_TO_ZIP.length) * 80) + 15);
         continue;
       }
 
-      // Fetch the file content from the local server
       const response = await fetch(`/${filePath}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch ${filePath}`);
@@ -97,15 +133,14 @@ export async function exportRepositoryAsZip(
       zip.file(filePath, fallbackContent);
     }
     completed++;
-    onProgress?.(Math.round((completed / FILES_TO_ZIP.length) * 90) + 5);
+    onProgress?.(Math.round((completed / FILES_TO_ZIP.length) * 80) + 15);
   }
 
-  // Generate ZIP file and trigger browser download
   const contentBlob = await zip.generateAsync({ type: 'blob' });
   const downloadUrl = URL.createObjectURL(contentBlob);
   const downloadLink = document.createElement('a');
   downloadLink.href = downloadUrl;
-  downloadLink.download = 'aura-creator-source.zip';
+  downloadLink.download = 'aura-source-code.zip';
   document.body.appendChild(downloadLink);
   downloadLink.click();
   document.body.removeChild(downloadLink);

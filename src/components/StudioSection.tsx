@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import MusicGenerator from './MusicGenerator';
 import { 
   User, 
   BookOpen, 
@@ -17,7 +18,9 @@ import {
   UserPlus, 
   Key, 
   FileText,
-  Bookmark
+  Bookmark,
+  Radio,
+  Music
 } from 'lucide-react';
 import { Character, ScreenplayBlock, ScreenplayBlockType } from '../types';
 
@@ -47,7 +50,7 @@ export default function StudioSection({
   onDeleteCharacter,
   onUpdateScreenplay
 }: StudioSectionProps) {
-  const [activeSubTab, setActiveSubTab] = useState<'writer' | 'characters'>('writer');
+  const [activeSubTab, setActiveSubTab] = useState<'writer' | 'characters' | 'music'>('writer');
   
   // Script editor states
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
@@ -180,8 +183,24 @@ export default function StudioSection({
               <User className="w-3.5 h-3.5 inline mr-1.5" />
               Character Profiles ({characters.length})
             </button>
+            <button
+              onClick={() => setActiveSubTab('music')}
+              className={`px-3 py-1.5 rounded-md text-xs font-mono transition flex items-center gap-1.5 ${
+                activeSubTab === 'music' ? 'bg-purple-900/60 text-purple-300 border border-purple-700/50' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Music className="w-3.5 h-3.5 text-cyan-400" />
+              <span>AI Music Generator</span>
+            </button>
           </div>
         </div>
+
+        {/* AI Music Generator View */}
+        {activeSubTab === 'music' && (
+          <div className="p-6">
+            <MusicGenerator />
+          </div>
+        )}
 
         {/* Screenplay Writer Draft */}
         {activeSubTab === 'writer' && (
