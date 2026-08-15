@@ -19,7 +19,9 @@ import {
   Menu, 
   X,
   TrendingUp,
-  BrainCircuit
+  BrainCircuit,
+  Image as ImageIcon,
+  Mic
 } from 'lucide-react';
 
 export type TabType = 
@@ -28,6 +30,8 @@ export type TabType =
   | 'friends' 
   | 'calls' 
   | 'omnimind' 
+  | 'imagegen'
+  | 'audio'
   | 'feed' 
   | 'videos' 
   | 'notifications' 
@@ -69,6 +73,8 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   const NAV_ITEMS = [
     { id: 'home', label: 'HOME', icon: Home, badge: null, color: 'text-purple-400' },
     { id: 'omnimind', label: 'AI ASSISTANT', icon: Bot, badge: 'AI', color: 'text-purple-400' },
+    { id: 'imagegen', label: 'AI IMAGE GEN', icon: ImageIcon, badge: '4K', color: 'text-purple-300' },
+    { id: 'audio', label: 'AUDIO TRANSCRIBE', icon: Mic, badge: 'AI', color: 'text-cyan-300' },
     { id: 'messages', label: 'MESSAGES', icon: MessageSquare, badge: null, color: 'text-cyan-400' },
     { id: 'calls', label: 'CALLS', icon: PhoneCall, badge: null, color: 'text-emerald-400' },
     { id: 'friends', label: 'FRIENDS', icon: Users, badge: null, color: 'text-indigo-400' },

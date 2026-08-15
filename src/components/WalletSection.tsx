@@ -15,7 +15,12 @@ import {
   Key,
   AlertTriangle,
   Info,
-  CreditCard
+  CreditCard,
+  Download,
+  FolderArchive,
+  FileCode,
+  Check,
+  Sparkles
 } from 'lucide-react';
 import { 
   fetchPaymentConfig, 
@@ -59,6 +64,36 @@ export default function WalletSection({ username, myPublicKey, balance, setBalan
     accountNumber: '0000000000',
     accountName: 'Aura Sovereign Treasury'
   });
+
+  const [downloadingZip, setDownloadingZip] = useState(false);
+  const [zipDownloaded, setZipDownloaded] = useState(false);
+
+  const handleDownloadSourceZip = async () => {
+    try {
+      setDownloadingZip(true);
+      const res = await fetch('/api/download-project-zip');
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `aura-sovereign-creator-source-${new Date().toISOString().slice(0, 10)}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        setZipDownloaded(true);
+        setTimeout(() => setZipDownloaded(false), 4000);
+      } else {
+        window.location.href = '/api/download-project-zip';
+      }
+    } catch (e) {
+      console.warn("Direct ZIP download fallback:", e);
+      window.location.href = '/api/download-project-zip';
+    } finally {
+      setDownloadingZip(false);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -291,16 +326,90 @@ export default function WalletSection({ username, myPublicKey, balance, setBalan
             Aura Creator Wallet
           </h2>
           <p className="text-xs text-slate-400 font-mono mt-1">
-            Zero-intermediary creator compensation ledger • Tip shares and direct payouts
+            Zero-intermediary creator compensation ledger • Tip shares, code distribution and direct payouts
           </p>
         </div>
-        <div className="bg-emerald-950/40 border border-emerald-800/60 rounded-xl px-3.5 py-1.5 flex items-center gap-2.5">
-          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-          <div>
-            <div className="text-[10px] uppercase font-mono text-emerald-400 font-bold leading-none">Primary Payout Node Configured</div>
-            <div className="text-xs text-slate-200 font-mono mt-1 font-semibold">Aura Sovereign Treasury</div>
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Download Source Code ZIP Icon Button in Creator's Wallet */}
+          <button
+            id="wallet-btn-download-source-zip"
+            type="button"
+            onClick={handleDownloadSourceZip}
+            disabled={downloadingZip}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-mono font-bold transition-all shadow-md active:scale-95 border ${
+              zipDownloaded
+                ? 'bg-emerald-600 border-emerald-400 text-white shadow-emerald-950/40'
+                : downloadingZip
+                ? 'bg-cyan-950/80 border-cyan-500/50 text-cyan-300 animate-pulse'
+                : 'bg-gradient-to-r from-emerald-700 via-teal-700 to-cyan-700 hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600 text-white border-emerald-400/30 shadow-emerald-950/30'
+            }`}
+            title="Download full project source code ZIP archive immediately"
+          >
+            {zipDownloaded ? (
+              <>
+                <Check className="w-4 h-4 text-white animate-bounce shrink-0" />
+                <span>Source ZIP Ready!</span>
+              </>
+            ) : downloadingZip ? (
+              <>
+                <div className="w-3.5 h-3.5 border-2 border-cyan-300 border-t-transparent rounded-full animate-spin shrink-0" />
+                <span>Archiving Source...</span>
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4 text-emerald-200 shrink-0" />
+                <span>Download Source ZIP</span>
+              </>
+            )}
+          </button>
+
+          <div className="bg-emerald-950/40 border border-emerald-800/60 rounded-xl px-3.5 py-1.5 flex items-center gap-2.5">
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+            <div>
+              <div className="text-[10px] uppercase font-mono text-emerald-400 font-bold leading-none">Primary Payout Node Configured</div>
+              <div className="text-xs text-slate-200 font-mono mt-1 font-semibold">Aura Sovereign Treasury</div>
+            </div>
           </div>
         </div>
+      </div>
+
+      {/* Prominent Creator Source Code ZIP Card */}
+      <div className="bg-gradient-to-r from-cyan-950/40 via-slate-900 to-slate-950 border border-cyan-500/30 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-cyan-950/80 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shrink-0 shadow-inner">
+            <FolderArchive className="w-6 h-6 animate-pulse" />
+          </div>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-slate-100 font-sans flex items-center gap-1.5">
+                <span>Creator Sovereign Source Archive</span>
+                <span className="text-[9px] bg-cyan-950 border border-cyan-700 text-cyan-300 px-2 py-0.5 rounded font-mono uppercase font-bold">
+                  ZIP Package
+                </span>
+              </h3>
+            </div>
+            <p className="text-xs text-slate-400 font-sans leading-relaxed">
+              Export and download the complete, production-ready source code repository for offline deployment, Termux compilation, or self-hosted sovereign hosting.
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={handleDownloadSourceZip}
+          disabled={downloadingZip}
+          className="w-full sm:w-auto px-4 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl text-xs font-mono font-bold border border-cyan-400/30 shadow-md shadow-cyan-950/40 transition flex items-center justify-center gap-2 shrink-0 hover:scale-[1.02] active:scale-95"
+        >
+          {downloadingZip ? (
+            <>
+              <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0" />
+              <span>Generating ZIP...</span>
+            </>
+          ) : (
+            <>
+              <Download className="w-4 h-4 text-cyan-200 shrink-0" />
+              <span>Download ZIP Archive</span>
+            </>
+          )}
+        </button>
       </div>
 
       {/* Grid of Balances and Quick Analytics */}

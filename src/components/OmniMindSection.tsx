@@ -85,12 +85,13 @@ export interface ChatSession {
 interface OmniMindSectionProps {
   username: string;
   avatar: string;
+  onNavigateTab?: (tab: string) => void;
 }
 
 const LOCAL_STORAGE_SESSIONS_KEY = 'omnimind_chat_sessions_v2';
 const LOCAL_STORAGE_ACTIVE_ID_KEY = 'omnimind_active_session_id_v2';
 
-export const OmniMindSection: React.FC<OmniMindSectionProps> = ({ username, avatar }) => {
+export const OmniMindSection: React.FC<OmniMindSectionProps> = ({ username, avatar, onNavigateTab }) => {
   const getDefaultWelcomeMessage = (): ChatMessage => ({
     id: 'welcome_msg_' + Date.now(),
     sender: 'assistant',
@@ -703,6 +704,29 @@ What would you like to build, learn, solve, or write today?`,
             <p className="text-slate-300 text-sm max-w-2xl leading-relaxed">
               Your state-of-the-art intelligent companion for natural conversation, deep math solving, software engineering, writing, file summarization, translation, and 4K multimodal creation.
             </p>
+
+            {/* Quick Studio Shortcut Buttons */}
+            {onNavigateTab && (
+              <div className="flex items-center gap-2 pt-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab('imagegen')}
+                  className="px-3 py-1.5 bg-gradient-to-r from-purple-950/80 to-indigo-950/80 hover:from-purple-900 hover:to-indigo-900 border border-purple-500/50 text-purple-200 rounded-xl text-xs font-mono font-bold transition flex items-center gap-1.5 shadow"
+                >
+                  <ImageIcon className="w-3.5 h-3.5 text-purple-400" />
+                  <span>Open 4K Image Studio</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab('audio')}
+                  className="px-3 py-1.5 bg-gradient-to-r from-cyan-950/80 to-blue-950/80 hover:from-cyan-900 hover:to-blue-900 border border-cyan-500/50 text-cyan-200 rounded-xl text-xs font-mono font-bold transition flex items-center gap-1.5 shadow"
+                >
+                  <Mic className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Open Audio Transcriber</span>
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2 self-start md:self-center flex-wrap">

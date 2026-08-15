@@ -67,6 +67,8 @@ import { AdsterraGlobalScripts } from './components/AdsterraAd';
 import VideoHubSection from './components/VideoHubSection';
 import VideoTheaterSection from './components/VideoTheaterSection';
 import { OmniMindSection } from './components/OmniMindSection';
+import HighQualityImageStudio from './components/HighQualityImageStudio';
+import AudioTranscriberStudio from './components/AudioTranscriberStudio';
 import HomeScreen from './components/HomeScreen';
 import CallsSection from './components/CallsSection';
 import FriendsSection from './components/FriendsSection';
@@ -230,7 +232,7 @@ const INITIAL_NODES: NetworkNode[] = [
 ];
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'home' | 'messages' | 'friends' | 'calls' | 'omnimind' | 'feed' | 'videos' | 'notifications' | 'profile' | 'settings' | 'wallet' | 'monetization' | 'reviews' | 'studio' | 'network' | 'admin' | 'discovery'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'messages' | 'friends' | 'calls' | 'omnimind' | 'imagegen' | 'audio' | 'feed' | 'videos' | 'notifications' | 'profile' | 'settings' | 'wallet' | 'monetization' | 'reviews' | 'studio' | 'network' | 'admin' | 'discovery'>('home');
   const [username, setUsername] = useState('AnonPeer_402');
   const [avatar, setAvatar] = useState('https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=60');
   const [userStatus, setUserStatus] = useState<string>(() => {
@@ -1875,6 +1877,77 @@ export default function App() {
             <OmniMindSection
               username={username}
               avatar={avatar}
+              onNavigateTab={(tab) => setActiveTab(tab as any)}
+            />
+          )}
+
+          {activeTab === 'imagegen' && (
+            <HighQualityImageStudio
+              username={username}
+              avatar={avatar}
+              onShareToFeed={(postData) => {
+                const newPost: FeedPost = {
+                  id: `post_img_${Date.now()}`,
+                  authorName: username,
+                  authorPublicKey: keys?.publicKey || 'user_pubkey_local',
+                  authorAvatar: avatar,
+                  type: (postData.type as any) || 'media',
+                  content: postData.content || '',
+                  mediaUrl: postData.mediaUrl,
+                  timestamp: Date.now(),
+                  signature: 'sig_local_image_gen',
+                  likes: 0,
+                  commentsCount: 0,
+                  comments: [],
+                  isAiPost: true,
+                  aiModel: postData.aiModel,
+                  aiQualityTier: postData.aiQualityTier,
+                  aiCapabilities: postData.aiCapabilities
+                };
+                handleAddPost(newPost);
+                setActiveTab('feed');
+              }}
+              onSetAvatar={(newAvatar) => {
+                setAvatar(newAvatar);
+                if (keys) {
+                  saveUserProfile(keys.publicKey, {
+                    username,
+                    avatar: newAvatar
+                  }).catch(e => console.warn("Failed saving avatar to db:", e));
+                }
+              }}
+              theme={theme}
+            />
+          )}
+
+          {activeTab === 'audio' && (
+            <AudioTranscriberStudio
+              username={username}
+              avatar={avatar}
+              onShareToFeed={(postData) => {
+                const newPost: FeedPost = {
+                  id: `post_aud_${Date.now()}`,
+                  authorName: username,
+                  authorPublicKey: keys?.publicKey || 'user_pubkey_local',
+                  authorAvatar: avatar,
+                  type: (postData.type as any) || 'voice',
+                  content: postData.content || '',
+                  voiceUrl: postData.voiceUrl,
+                  voiceDuration: postData.voiceDuration,
+                  timestamp: Date.now(),
+                  signature: 'sig_local_audio_transcribe',
+                  likes: 0,
+                  commentsCount: 0,
+                  comments: [],
+                  isAiPost: true,
+                  aiModel: postData.aiModel,
+                  aiQualityTier: postData.aiQualityTier,
+                  aiCapabilities: postData.aiCapabilities
+                };
+                handleAddPost(newPost);
+                setActiveTab('feed');
+              }}
+              theme={theme}
             />
           )}
 

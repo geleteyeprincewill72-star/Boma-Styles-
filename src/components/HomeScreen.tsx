@@ -17,7 +17,9 @@ import {
   Plus, 
   Flame,
   ChevronRight,
-  Zap
+  Zap,
+  Image as ImageIcon,
+  Mic
 } from 'lucide-react';
 import { FeedPost } from '../types';
 import { AdsterraAd } from './AdsterraAd';
@@ -292,6 +294,64 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </p>
             <div className="mt-4 flex items-center text-xs font-mono font-bold text-amber-400 group-hover:translate-x-1 transition">
               <span>Open Video Hub</span>
+              <ArrowRight className="w-3.5 h-3.5 ml-1" />
+            </div>
+          </div>
+
+          {/* Card 7: 4K Image Generator */}
+          <div
+            onClick={() => onNavigateTab('imagegen')}
+            className={`group cursor-pointer rounded-2xl p-5 border transition-all duration-200 hover:-translate-y-1 shadow-lg relative overflow-hidden ${
+              isLight
+                ? 'bg-white border-slate-200 hover:border-purple-300'
+                : 'bg-[#0F1526] border-purple-500/20 hover:border-purple-500/50 shadow-purple-950/20'
+            }`}
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div className="p-3 rounded-2xl bg-purple-500/15 border border-purple-500/30 text-purple-300 group-hover:scale-110 transition">
+                <ImageIcon className="w-6 h-6" />
+              </div>
+              <span className="text-[10px] font-mono text-purple-300 font-bold bg-purple-950/80 border border-purple-800 px-2 py-0.5 rounded-full">
+                4K Ultra HD
+              </span>
+            </div>
+            <h4 className="text-sm font-bold text-slate-100 font-sans group-hover:text-purple-300 transition">
+              4K IMAGE GENERATOR
+            </h4>
+            <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+              Generate photorealistic, cyberpunk, and anime art with 1-click download & feed sharing.
+            </p>
+            <div className="mt-4 flex items-center text-xs font-mono font-bold text-purple-400 group-hover:translate-x-1 transition">
+              <span>Launch Studio</span>
+              <ArrowRight className="w-3.5 h-3.5 ml-1" />
+            </div>
+          </div>
+
+          {/* Card 8: Audio Transcriber Studio */}
+          <div
+            onClick={() => onNavigateTab('audio')}
+            className={`group cursor-pointer rounded-2xl p-5 border transition-all duration-200 hover:-translate-y-1 shadow-lg relative overflow-hidden ${
+              isLight
+                ? 'bg-white border-slate-200 hover:border-cyan-300'
+                : 'bg-[#0F1526] border-cyan-500/20 hover:border-cyan-500/50 shadow-cyan-950/20'
+            }`}
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div className="p-3 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 group-hover:scale-110 transition">
+                <Mic className="w-6 h-6" />
+              </div>
+              <span className="text-[10px] font-mono text-cyan-300 font-bold bg-cyan-950/80 border border-cyan-800 px-2 py-0.5 rounded-full">
+                Speech AI
+              </span>
+            </div>
+            <h4 className="text-sm font-bold text-slate-100 font-sans group-hover:text-cyan-300 transition">
+              AUDIO TRANSCRIBER
+            </h4>
+            <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+              Transcribe live voice and audio files with AI summaries, action items, and SRT subtitles.
+            </p>
+            <div className="mt-4 flex items-center text-xs font-mono font-bold text-cyan-400 group-hover:translate-x-1 transition">
+              <span>Open Transcriber</span>
               <ArrowRight className="w-3.5 h-3.5 ml-1" />
             </div>
           </div>
