@@ -4,6 +4,7 @@ import { AdsterraAd } from './AdsterraAd';
 import { PostPreference } from './FirstTimePostPreferenceModal';
 import ModerationCouncilModal from './ModerationCouncilModal';
 import DecentralizedIdentityModal from './DecentralizedIdentityModal';
+import FeedVideoCard from './FeedVideoCard';
 import { personalizeAndDiscoverContent, logOnDeviceInteraction } from '../utils/discoveryEngine';
 import { 
   Heart, 
@@ -1353,25 +1354,7 @@ export default function FeedSection({
 
                   {/* Video Render Section */}
                   {hasVideo && (
-                    <div className="bg-slate-950 border-b border-slate-950">
-                      <div className="aspect-video w-full relative">
-                        <video 
-                          src={post.mediaUrl}
-                          controls
-                          className="w-full h-full object-cover"
-                          poster={post.mediaThumbnail}
-                        />
-                      </div>
-                      <div className="p-4 bg-slate-900/40 border-b border-slate-950">
-                        <h4 className="font-sans font-bold text-base text-slate-100 leading-snug flex items-center gap-1.5">
-                          <Film className="w-4 h-4 text-red-500 flex-shrink-0" />
-                          {post.title}
-                        </h4>
-                        <p className="text-[11px] font-mono text-slate-500 mt-1">
-                          Solas Swarm Broadcast • Simulated video streams signed in P2P ledger
-                        </p>
-                      </div>
-                    </div>
+                    <FeedVideoCard post={post} />
                   )}
 
                   {/* Voice Note Player Render Section */}

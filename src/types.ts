@@ -186,3 +186,45 @@ export interface SharedState {
   avatar: string;
   networkNodes: NetworkNode[];
 }
+
+export interface VideoPlaylistItem {
+  id: string;
+  title: string;
+  authorName: string;
+  mediaThumbnail: string;
+  mediaUrl: string;
+  addedAt: number;
+  post: FeedPost;
+}
+
+export interface VideoPlaylist {
+  id: string;
+  name: string;
+  description?: string;
+  items: VideoPlaylistItem[];
+  createdAt: number;
+  updatedAt: number;
+  isDefault?: boolean;
+  coverImage?: string;
+}
+
+export interface VideoWatchHistoryItem {
+  id: string;
+  title: string;
+  authorName: string;
+  mediaThumbnail?: string;
+  mediaUrl?: string;
+  watchedAt: number;
+  lastPositionSeconds: number;
+  durationSeconds: number;
+  completed?: boolean;
+  post: FeedPost;
+}
+
+export interface VideoRecommendation {
+  post: FeedPost;
+  score: number;
+  matchReason: string;
+  tags: string[];
+}
+

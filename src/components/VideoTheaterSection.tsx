@@ -31,13 +31,35 @@ import {
   Activity,
   BarChart2,
   ShieldCheck,
-  ArrowUpRight
+  ArrowUpRight,
+  ListMusic,
+  ListPlus,
+  Trash2,
+  Flame,
+  Bookmark,
+  PlayCircle,
+  SlidersHorizontal,
+  Compass,
+  Check
 } from 'lucide-react';
-import { FeedPost, Comment } from '../types';
+import { FeedPost, Comment, VideoPlaylist, VideoWatchHistoryItem, VideoRecommendation } from '../types';
 import { uploadFileToStorage } from '../utils/firebase';
 import CreatorVideoAnalytics from './CreatorVideoAnalytics';
 import CustomHlsPlayer from './CustomHlsPlayer';
 import PhoneAdaptationBanner from './PhoneAdaptationBanner';
+import VideoPlaylistModal from './VideoPlaylistModal';
+import { 
+  getVideoWatchHistory, 
+  saveVideoWatchHistoryItem, 
+  clearVideoWatchHistory, 
+  removeVideoWatchHistoryItem,
+  getVideoPlaylists,
+  createVideoPlaylist,
+  removeVideoFromPlaylist,
+  deleteVideoPlaylist,
+  calculateVideoRecommendations,
+  formatVideoDuration
+} from '../utils/videoEngine';
 
 interface VideoTheaterSectionProps {
   posts: FeedPost[];
@@ -96,49 +118,78 @@ export default function VideoTheaterSection({
 
   // Play Queue local state array
   const [videoQueue, setVideoQueue] = useState<FeedPost[]>([]);
+  const [activePlaylistTitle, setActivePlaylistTitle] = useState<string | null>(null);
 
-  // Session Watch History State
-  interface WatchHistoryItem {
-    id: string;
-    title: string;
-    authorName: string;
-    mediaThumbnail?: string;
-    watchedAt: number;
-    post: FeedPost;
-  }
+  // Active Sidebar Navigation Tab
+  type VideoTabType = 'recommended' | 'broadcasts' | 'playlists' | 'history' | 'queue';
+  const [activeSidebarTab, setActiveSidebarTab] = useState<VideoTabType>('recommended');
 
-  const [watchHistory, setWatchHistory] = useState<WatchHistoryItem[]>(() => {
-    try {
-      const saved = sessionStorage.getItem('aura_video_watch_history');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
-  });
+  // Video Playlist Modal and View states
+  const [playlistModalPost, setPlaylistModalPost] = useState<FeedPost | null>(null);
+  const [playlists, setPlaylists] = useState<VideoPlaylist[]>(() => getVideoPlaylists());
+  const [viewingPlaylistId, setViewingPlaylistId] = useState<string | null>(null);
+  const [newPlaylistTitleInput, setNewPlaylistTitleInput] = useState('');
+  const [newPlaylistDescInput, setNewPlaylistDescInput] = useState('');
+  const [showCreatePlaylistForm, setShowCreatePlaylistForm] = useState(false);
+
+  // Recommendation filter state
+  const [recFilter, setRecFilter] = useState<'all' | 'likes' | 'history' | 'affinity'>('all');
+
+  // Persistent Watch History State
+  const [watchHistory, setWatchHistory] = useState<VideoWatchHistoryItem[]>(() => getVideoWatchHistory());
+  const [resumeTime, setResumeTime] = useState<number>(0);
+
+  // Refresh playlists from storage
+  const refreshPlaylists = () => {
+    setPlaylists(getVideoPlaylists());
+  };
+
+  // Refresh history from storage
+  const refreshHistory = () => {
+    setWatchHistory(getVideoWatchHistory());
+  };
+
+  const handleSelectVideo = (post: FeedPost, startPos = 0) => {
+    setSelectedPost(post);
+    setResumeTime(startPos);
+    setIsVideoPlaying(true);
+  };
 
   // Track watch history when selectedPost changes
   useEffect(() => {
     if (selectedPost) {
-      setWatchHistory(prev => {
-        const filtered = prev.filter(item => item.id !== selectedPost.id);
-        const updated = [
-          {
-            id: selectedPost.id,
-            title: selectedPost.title || 'Broadcast Stream',
-            authorName: selectedPost.authorName || 'Bios Styles',
-            mediaThumbnail: selectedPost.mediaThumbnail,
-            watchedAt: Date.now(),
-            post: selectedPost
-          },
-          ...filtered
-        ];
-        try {
-          sessionStorage.setItem('aura_video_watch_history', JSON.stringify(updated.slice(0, 25)));
-        } catch (e) {}
-        return updated;
+      saveVideoWatchHistoryItem({
+        id: selectedPost.id,
+        title: selectedPost.title || 'Broadcast Stream',
+        authorName: selectedPost.authorName || 'Bios Styles',
+        mediaThumbnail: selectedPost.mediaThumbnail,
+        mediaUrl: selectedPost.mediaUrl,
+        post: selectedPost,
+        lastPositionSeconds: resumeTime || 0,
+        durationSeconds: 100,
+        completed: false
       });
+      refreshHistory();
     }
   }, [selectedPost?.id]);
+
+  // Handle periodic playback time updates to save progress
+  const handlePlaybackTimeUpdate = (currentSec: number, totalDurSec: number) => {
+    if (!selectedPost) return;
+    if (Math.floor(currentSec) % 5 === 0) {
+      saveVideoWatchHistoryItem({
+        id: selectedPost.id,
+        title: selectedPost.title || 'Broadcast Stream',
+        authorName: selectedPost.authorName || 'Bios Styles',
+        mediaThumbnail: selectedPost.mediaThumbnail,
+        mediaUrl: selectedPost.mediaUrl,
+        post: selectedPost,
+        lastPositionSeconds: currentSec,
+        durationSeconds: totalDurSec || 100,
+        completed: totalDurSec > 0 && currentSec / totalDurSec > 0.9
+      });
+    }
+  };
 
   const addToQueue = (post: FeedPost, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -156,6 +207,22 @@ export default function VideoTheaterSection({
 
   const clearQueue = () => {
     setVideoQueue([]);
+    setActivePlaylistTitle(null);
+  };
+
+  const handlePlayPlaylist = (playlist: VideoPlaylist) => {
+    if (playlist.items.length === 0) {
+      alert("This playlist has no videos yet. Add some videos using '+ Playlist'!");
+      return;
+    }
+    const postsInPlaylist = playlist.items.map(item => item.post);
+    const firstVideo = postsInPlaylist[0];
+    const remainingQueue = postsInPlaylist.slice(1);
+    
+    setActivePlaylistTitle(playlist.name);
+    setVideoQueue(remainingQueue);
+    handleSelectVideo(firstVideo);
+    setActiveSidebarTab('queue');
   };
 
   const handleVideoEnded = () => {
@@ -165,6 +232,17 @@ export default function VideoTheaterSection({
       handleSelectVideo(nextVideo);
     }
   };
+
+  // Recommendations calculated dynamically based on current user watch history and likes
+  const recommendations: VideoRecommendation[] = calculateVideoRecommendations(videoPosts, selectedPost?.id);
+
+  const filteredRecommendations = recommendations.filter(rec => {
+    if (recFilter === 'all') return true;
+    if (recFilter === 'likes') return rec.matchReason.toLowerCase().includes('liked');
+    if (recFilter === 'history') return rec.matchReason.toLowerCase().includes('history') || rec.matchReason.toLowerCase().includes('watched');
+    if (recFilter === 'affinity') return rec.matchReason.toLowerCase().includes('author') || rec.matchReason.toLowerCase().includes('creator');
+    return true;
+  });
 
   // Initialize selected post if videos exist
   useEffect(() => {
@@ -608,8 +686,10 @@ export default function VideoTheaterSection({
                   poster={selectedPost.mediaThumbnail}
                   title={selectedPost.title || 'Broadcast Stream'}
                   autoPlay={true}
+                  initialTime={resumeTime}
                   isLiteMode={isLiteMode}
                   creatorName={selectedPost.authorName || 'Bios Styles'}
+                  onTimeUpdateCallback={handlePlaybackTimeUpdate}
                   onEnded={() => {
                     setIsVideoPlaying(false);
                     handleVideoEnded();
@@ -725,6 +805,16 @@ export default function VideoTheaterSection({
                         {videoQueue.some(item => item.id === selectedPost.id) ? 'Queued' : 'Queue Video'}
                       </button>
 
+                      {/* Save to Playlist Button */}
+                      <button
+                        onClick={() => setPlaylistModalPost(selectedPost)}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition border bg-slate-900 border-slate-850 hover:bg-slate-800 text-slate-300 hover:text-rose-400"
+                        title="Save Video to Playlist"
+                      >
+                        <ListPlus className="w-3.5 h-3.5 text-rose-400" />
+                        <span>Save</span>
+                      </button>
+
                       <button
                         onClick={() => {
                           navigator.clipboard.writeText(window.location.href);
@@ -820,231 +910,743 @@ export default function VideoTheaterSection({
           )}
         </div>
 
-        {/* Sidebar & Upload Column (4 Cols) */}
-        <div className="lg:col-span-4 space-y-6">
-          {/* Play Queue Panel */}
-          <div className="bg-[#0A0F1D] border border-slate-900 rounded-2xl p-4 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-900 pb-2">
-              <h3 className="text-xs font-bold text-slate-200 font-mono uppercase tracking-wider flex items-center gap-1.5">
-                <History className="w-4 h-4 text-cyan-400 animate-pulse" />
-                Play Queue
-              </h3>
-              {videoQueue.length > 0 && (
-                <button
-                  onClick={clearQueue}
-                  className="text-[9px] text-slate-500 hover:text-rose-400 font-mono uppercase font-bold transition-colors"
-                >
-                  Clear Queue
-                </button>
-              )}
+        {/* Sidebar & Navigation Center Column (4 Cols) */}
+        <div className="lg:col-span-4 space-y-4">
+          
+          {/* Main Video Hub Navigation Tabs */}
+          <div className="bg-[#0A0F1D] border border-slate-900 rounded-2xl p-2 shadow-xl">
+            <div className="grid grid-cols-5 gap-1 text-[10px] font-mono font-bold uppercase">
+              <button
+                onClick={() => { setActiveSidebarTab('recommended'); setViewingPlaylistId(null); }}
+                className={`py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition ${
+                  activeSidebarTab === 'recommended'
+                    ? 'bg-rose-600 text-white shadow-lg shadow-rose-900/50'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+                title="Smart Recommendations based on your likes & watch history"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span className="truncate">For You</span>
+              </button>
+
+              <button
+                onClick={() => { setActiveSidebarTab('broadcasts'); setViewingPlaylistId(null); }}
+                className={`py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition ${
+                  activeSidebarTab === 'broadcasts'
+                    ? 'bg-rose-600 text-white shadow-lg shadow-rose-900/50'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+                title="All live broadcast streams"
+              >
+                <Video className="w-3.5 h-3.5" />
+                <span className="truncate">Streams</span>
+              </button>
+
+              <button
+                onClick={() => { setActiveSidebarTab('playlists'); setViewingPlaylistId(null); }}
+                className={`py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition relative ${
+                  activeSidebarTab === 'playlists'
+                    ? 'bg-rose-600 text-white shadow-lg shadow-rose-900/50'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+                title="Your playlists & watch later"
+              >
+                <ListMusic className="w-3.5 h-3.5" />
+                <span className="truncate">Playlists</span>
+                {playlists.length > 0 && (
+                  <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-cyan-400" />
+                )}
+              </button>
+
+              <button
+                onClick={() => { setActiveSidebarTab('history'); setViewingPlaylistId(null); }}
+                className={`py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition relative ${
+                  activeSidebarTab === 'history'
+                    ? 'bg-rose-600 text-white shadow-lg shadow-rose-900/50'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+                title="Watch history & resume points"
+              >
+                <History className="w-3.5 h-3.5" />
+                <span className="truncate">History</span>
+                {watchHistory.length > 0 && (
+                  <span className="absolute top-1 right-1 text-[8px] bg-amber-500 text-black px-1 rounded-full font-black">
+                    {watchHistory.length}
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={() => { setActiveSidebarTab('queue'); setViewingPlaylistId(null); }}
+                className={`py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition relative ${
+                  activeSidebarTab === 'queue'
+                    ? 'bg-rose-600 text-white shadow-lg shadow-rose-900/50'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+                title="Active play queue"
+              >
+                <ListPlus className="w-3.5 h-3.5" />
+                <span className="truncate">Queue</span>
+                {videoQueue.length > 0 && (
+                  <span className="absolute top-1 right-1 text-[8px] bg-cyan-400 text-black px-1 rounded-full font-black">
+                    {videoQueue.length}
+                  </span>
+                )}
+              </button>
             </div>
-
-            {videoQueue.length > 0 ? (
-              <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-                {videoQueue.map((p, idx) => (
-                  <div
-                    key={`${p.id}_q_${idx}`}
-                    className="p-2 bg-slate-950/60 border border-slate-900 rounded-xl flex items-center justify-between gap-2 text-xs font-sans group relative"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-[10px] font-mono text-cyan-500 font-bold w-4 text-center">
-                        {idx + 1}
-                      </span>
-                      <div className="w-10 h-8 bg-black rounded overflow-hidden flex-shrink-0">
-                        <img src={p.mediaThumbnail} alt={p.title} className="w-full h-full object-cover" />
-                      </div>
-                      <div className="min-w-0 w-full">
-                        <h4 className="text-xs font-bold text-slate-200 truncate pr-4">
-                          {p.title}
-                        </h4>
-                        <span className="text-[9px] text-slate-500 font-mono block">
-                          {p.authorName}
-                        </span>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={(e) => removeFromQueue(p.id, e)}
-                      className="text-slate-500 hover:text-red-400 p-1 rounded-md transition hover:bg-slate-900 shrink-0"
-                      title="Remove from play queue"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-                
-                {/* Active "Up Next" preview */}
-                <div className="p-2 bg-cyan-950/15 border border-cyan-500/20 rounded-xl text-[10px] font-mono text-cyan-400 flex items-center gap-2 mt-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
-                  <span>Up Next: <strong className="font-bold">{videoQueue[0].title}</strong></span>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-6 px-4 bg-slate-950/30 border border-dashed border-slate-900 rounded-xl text-[10px] text-slate-500 font-mono space-y-1">
-                <p>Play queue is empty.</p>
-                <p className="text-slate-600">Click "+ Queue" on any broadcast stream to build an auto-play sequence.</p>
-              </div>
-            )}
           </div>
 
-          {/* Watch History Sidebar Panel */}
-          <div className="bg-[#0A0F1D] border border-slate-900 rounded-2xl p-4 space-y-4 shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-900 pb-2">
-              <h3 className="text-xs font-bold text-slate-200 font-mono uppercase tracking-wider flex items-center gap-1.5">
-                <History className="w-4 h-4 text-amber-400" />
-                <span>Watch History</span>
-                <span className="text-[10px] bg-amber-950/60 border border-amber-800/40 text-amber-300 px-1.5 py-0.2 rounded font-mono font-bold">
-                  {watchHistory.length}
+          {/* TAB 1: SMART RECOMMENDATIONS ("FOR YOU") */}
+          {activeSidebarTab === 'recommended' && (
+            <div className="bg-[#0A0F1D] border border-slate-900 rounded-2xl p-4 space-y-3.5 shadow-xl">
+              <div className="flex items-center justify-between border-b border-slate-900 pb-2">
+                <h3 className="text-xs font-bold text-slate-200 font-mono uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-rose-500 animate-pulse" />
+                  <span>Recommended For You</span>
+                </h3>
+                <span className="text-[9px] bg-rose-950/60 border border-rose-800/40 text-rose-400 px-2 py-0.5 rounded font-black font-mono">
+                  {filteredRecommendations.length} MATCHES
                 </span>
-              </h3>
-              {watchHistory.length > 0 && (
-                <button
-                  onClick={() => {
-                    setWatchHistory([]);
-                    sessionStorage.removeItem('aura_video_watch_history');
-                  }}
-                  className="text-[9px] text-slate-500 hover:text-rose-400 font-mono uppercase font-bold transition-colors"
-                >
-                  Clear History
-                </button>
-              )}
-            </div>
+              </div>
 
-            {watchHistory.length > 0 ? (
-              <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
-                {watchHistory.map((item) => {
-                  const isCurrent = selectedPost?.id === item.id;
-                  return (
-                    <div
-                      key={item.id + '_' + item.watchedAt}
-                      onClick={() => handleSelectVideo(item.post)}
-                      className={`p-2 rounded-xl border flex items-center justify-between gap-2.5 transition cursor-pointer ${
-                        isCurrent
-                          ? 'bg-amber-950/30 border-amber-500/60 text-slate-100 shadow-sm'
-                          : 'bg-slate-950/60 border-slate-850 hover:border-slate-700 text-slate-300 hover:bg-slate-900'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        <div className="w-12 h-9 bg-black rounded overflow-hidden flex-shrink-0 relative">
-                          <img
-                            src={item.mediaThumbnail}
-                            alt={item.title}
-                            className="w-full h-full object-cover"
-                          />
-                          {isCurrent && (
-                            <div className="absolute inset-0 bg-amber-500/30 flex items-center justify-center">
-                              <Play className="w-3.5 h-3.5 text-amber-300 fill-current" />
-                            </div>
-                          )}
+              {/* Recommendation filter tags */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[9px] font-mono font-bold uppercase no-scrollbar">
+                <button
+                  onClick={() => setRecFilter('all')}
+                  className={`px-2.5 py-1 rounded-lg transition whitespace-nowrap ${
+                    recFilter === 'all'
+                      ? 'bg-slate-800 text-white border border-slate-700'
+                      : 'bg-slate-950 text-slate-500 hover:text-slate-300'
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => setRecFilter('likes')}
+                  className={`px-2.5 py-1 rounded-lg transition whitespace-nowrap flex items-center gap-1 ${
+                    recFilter === 'likes'
+                      ? 'bg-rose-950/80 text-rose-300 border border-rose-700'
+                      : 'bg-slate-950 text-slate-500 hover:text-slate-300'
+                  }`}
+                >
+                  <ThumbsUp className="w-2.5 h-2.5" />
+                  Your Likes
+                </button>
+                <button
+                  onClick={() => setRecFilter('history')}
+                  className={`px-2.5 py-1 rounded-lg transition whitespace-nowrap flex items-center gap-1 ${
+                    recFilter === 'history'
+                      ? 'bg-amber-950/80 text-amber-300 border border-amber-700'
+                      : 'bg-slate-950 text-slate-500 hover:text-slate-300'
+                  }`}
+                >
+                  <History className="w-2.5 h-2.5" />
+                  Watch History
+                </button>
+                <button
+                  onClick={() => setRecFilter('affinity')}
+                  className={`px-2.5 py-1 rounded-lg transition whitespace-nowrap flex items-center gap-1 ${
+                    recFilter === 'affinity'
+                      ? 'bg-cyan-950/80 text-cyan-300 border border-cyan-700'
+                      : 'bg-slate-950 text-slate-500 hover:text-slate-300'
+                  }`}
+                >
+                  <User className="w-2.5 h-2.5" />
+                  Creator Affinity
+                </button>
+              </div>
+
+              {/* Recommendations list */}
+              <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+                {filteredRecommendations.length > 0 ? (
+                  filteredRecommendations.map((rec) => {
+                    const isCurrent = selectedPost?.id === rec.post.id;
+                    const isQueued = videoQueue.some(item => item.id === rec.post.id);
+                    const matchPercent = Math.min(99, Math.round(rec.score * 100));
+
+                    return (
+                      <div
+                        key={`rec_${rec.post.id}`}
+                        className={`p-3 rounded-xl border transition space-y-2 ${
+                          isCurrent
+                            ? 'bg-rose-950/20 border-rose-500 text-slate-100 shadow-md'
+                            : 'bg-slate-950/60 border-slate-850 hover:border-slate-700 text-slate-300'
+                        }`}
+                      >
+                        {/* Match Reason Header */}
+                        <div className="flex items-center justify-between text-[9px] font-mono">
+                          <span className="text-slate-400 truncate max-w-[200px] flex items-center gap-1" title={rec.matchReason}>
+                            <Sparkles className="w-2.5 h-2.5 text-amber-400 shrink-0" />
+                            <span className="truncate">{rec.matchReason}</span>
+                          </span>
+                          <span className="bg-gradient-to-r from-rose-950 to-amber-950 border border-rose-800/40 text-rose-300 font-bold px-1.5 py-0.5 rounded shrink-0">
+                            {matchPercent}% MATCH
+                          </span>
                         </div>
-                        <div className="min-w-0 flex-1 space-y-0.5">
-                          <h4 className="text-xs font-bold text-slate-200 truncate font-sans">
-                            {item.title}
-                          </h4>
-                          <div className="flex items-center justify-between text-[9px] font-mono text-slate-400">
-                            <span className="truncate">By {item.authorName}</span>
-                            {isCurrent ? (
-                              <span className="text-amber-400 font-bold uppercase">Now Watching</span>
-                            ) : (
-                              <span className="text-slate-500">
-                                {new Date(item.watchedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                            )}
+
+                        {/* Video Card Content */}
+                        <div className="flex gap-2.5">
+                          <div 
+                            onClick={() => handleSelectVideo(rec.post)}
+                            className="w-20 h-14 bg-black rounded-lg overflow-hidden flex-shrink-0 relative cursor-pointer group"
+                          >
+                            <img
+                              src={rec.post.mediaThumbnail}
+                              alt={rec.post.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                            />
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                              <Play className="w-4 h-4 text-white fill-white" />
+                            </div>
+                          </div>
+
+                          <div className="flex-1 min-w-0 space-y-1">
+                            <h4 
+                              onClick={() => handleSelectVideo(rec.post)}
+                              className="text-xs font-bold text-slate-200 line-clamp-1 cursor-pointer hover:text-rose-400 transition"
+                            >
+                              {rec.post.title}
+                            </h4>
+                            <span className="text-[10px] text-slate-500 font-mono block truncate">
+                              By {rec.post.authorName}
+                            </span>
+                            <div className="flex items-center gap-2 text-[9px] font-mono text-slate-500">
+                              <span>{rec.post.views?.toLocaleString() || '142'} views</span>
+                              <span>•</span>
+                              <span>{rec.post.likes || 0} likes</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Quick action buttons */}
+                        <div className="flex items-center justify-between pt-1 border-t border-slate-900 text-[9px] font-mono font-bold uppercase">
+                          <button
+                            onClick={() => handleSelectVideo(rec.post)}
+                            className="text-slate-300 hover:text-white flex items-center gap-1"
+                          >
+                            <Play className="w-3 h-3 text-rose-400" />
+                            <span>Play Now</span>
+                          </button>
+
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => setPlaylistModalPost(rec.post)}
+                              className="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition flex items-center gap-1"
+                              title="Save to Playlist"
+                            >
+                              <ListPlus className="w-2.5 h-2.5" />
+                              <span>Save</span>
+                            </button>
+
+                            <button
+                              onClick={(e) => isQueued ? removeFromQueue(rec.post.id, e) : addToQueue(rec.post, e)}
+                              className={`px-2 py-0.5 rounded border transition flex items-center gap-1 ${
+                                isQueued
+                                  ? 'bg-cyan-950/80 border-cyan-800 text-cyan-400'
+                                  : 'bg-slate-900 border-slate-850 hover:bg-slate-800 text-slate-300 hover:text-cyan-400'
+                              }`}
+                            >
+                              <Plus className="w-2.5 h-2.5" />
+                              <span>{isQueued ? 'Queued' : 'Queue'}</span>
+                            </button>
                           </div>
                         </div>
                       </div>
-                      
-                      <ChevronRight className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-8 px-4 bg-slate-950/30 border border-dashed border-slate-900 rounded-xl text-[10px] text-slate-500 font-mono space-y-1.5">
+                    <Sparkles className="w-6 h-6 text-slate-700 mx-auto" />
+                    <p>No matching video recommendations for this filter.</p>
+                    <p className="text-slate-600">Like or watch more broadcast streams to tune your decentralized recommendation feed.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: ALL BROADCAST STREAMS */}
+          {activeSidebarTab === 'broadcasts' && (
+            <div className="bg-[#0A0F1D] border border-slate-900 rounded-2xl p-4 space-y-4 shadow-xl">
+              <h3 className="text-xs font-bold text-slate-200 font-mono uppercase tracking-wider flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Video className="w-4 h-4 text-rose-500 animate-pulse" />
+                  Mesh Broadcasts
+                </span>
+                <span className="text-[9px] bg-rose-950/60 border border-rose-800/40 text-rose-400 px-2 py-0.5 rounded font-black font-mono">
+                  {videoPosts.length} ONLINE
+                </span>
+              </h3>
+
+              <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+                {videoPosts.map(p => {
+                  const isQueued = videoQueue.some(item => item.id === p.id);
+                  return (
+                    <div
+                      key={p.id}
+                      className={`p-2.5 rounded-xl border flex items-center justify-between gap-2.5 transition ${
+                        selectedPost?.id === p.id
+                          ? 'bg-rose-950/20 border-rose-500 text-slate-100 shadow'
+                          : 'border-slate-850 hover:border-slate-800 text-slate-400 bg-slate-950/20'
+                      }`}
+                    >
+                      <div 
+                        onClick={() => handleSelectVideo(p)}
+                        className="flex gap-2.5 cursor-pointer flex-grow min-w-0"
+                      >
+                        <div className="w-16 h-12 bg-black rounded-lg overflow-hidden flex-shrink-0 relative">
+                          <img
+                            src={p.mediaThumbnail}
+                            alt={p.title}
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-slate-950/40 flex items-center justify-center">
+                            <Play className="w-4 h-4 text-white drop-shadow opacity-80" />
+                          </div>
+                        </div>
+                        <div className="flex-grow min-w-0 space-y-1">
+                          <h4 className="text-xs font-bold text-slate-200 font-sans line-clamp-1">
+                            {p.title}
+                          </h4>
+                          <span className="text-[10px] text-slate-500 font-mono block truncate">
+                            By {p.authorName}
+                          </span>
+                          <span className="text-[9px] bg-slate-900 border border-slate-850 text-slate-400 font-mono px-1 py-0.5 rounded uppercase inline-block">
+                            {p.views?.toLocaleString() || '142'} Views
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-1 shrink-0">
+                        {/* Quick Queue Toggle Button */}
+                        <button
+                          onClick={(e) => isQueued ? removeFromQueue(p.id, e) : addToQueue(p, e)}
+                          className={`px-2 py-1 border rounded-lg text-[9px] font-mono font-bold uppercase transition flex items-center gap-1 ${
+                            isQueued 
+                              ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-400 hover:bg-red-950/25 hover:border-red-500/30 hover:text-red-400' 
+                              : 'bg-slate-900 border-slate-850 hover:bg-slate-800 text-slate-300 hover:text-rose-400'
+                          }`}
+                          title={isQueued ? "Remove from queue" : "Add to queue"}
+                        >
+                          {isQueued ? (
+                            <>
+                              <Check className="w-3 h-3 text-emerald-400" />
+                              <span>Queued</span>
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="w-3 h-3 text-rose-500" />
+                              <span>Queue</span>
+                            </>
+                          )}
+                        </button>
+
+                        <button
+                          onClick={() => setPlaylistModalPost(p)}
+                          className="px-2 py-1 bg-slate-900 border border-slate-850 hover:bg-slate-800 rounded-lg text-[9px] font-mono text-slate-400 hover:text-slate-200 transition text-center"
+                          title="Save to playlist"
+                        >
+                          Save
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
               </div>
-            ) : (
-              <div className="text-center py-5 px-3 bg-slate-950/30 border border-dashed border-slate-900 rounded-xl text-[10px] text-slate-500 font-mono space-y-1">
-                <p>No watch history in this session yet.</p>
-                <p className="text-slate-600">Videos you play will automatically appear here as a clickable history list.</p>
+            </div>
+          )}
+
+          {/* TAB 3: PLAYLISTS MANAGEMENT */}
+          {activeSidebarTab === 'playlists' && (
+            <div className="bg-[#0A0F1D] border border-slate-900 rounded-2xl p-4 space-y-3.5 shadow-xl">
+              <div className="flex items-center justify-between border-b border-slate-900 pb-2">
+                <h3 className="text-xs font-bold text-slate-200 font-mono uppercase tracking-wider flex items-center gap-1.5">
+                  <ListMusic className="w-4 h-4 text-cyan-400" />
+                  <span>Video Playlists</span>
+                  <span className="text-[10px] bg-cyan-950/60 border border-cyan-800/40 text-cyan-300 px-1.5 rounded font-mono font-bold">
+                    {playlists.length}
+                  </span>
+                </h3>
+                <button
+                  onClick={() => setShowCreatePlaylistForm(!showCreatePlaylistForm)}
+                  className="text-[9px] bg-cyan-950/80 border border-cyan-800/60 text-cyan-300 hover:bg-cyan-900 px-2 py-1 rounded-lg font-mono uppercase font-bold transition flex items-center gap-1"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>New Playlist</span>
+                </button>
               </div>
-            )}
-          </div>
 
-          {/* Active Broadcasts Sidebar List */}
-          <div className="bg-[#0A0F1D] border border-slate-900 rounded-2xl p-4 space-y-4">
-            <h3 className="text-xs font-bold text-slate-200 font-mono uppercase tracking-wider flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <Video className="w-4 h-4 text-rose-500 animate-pulse" />
-                Mesh Broadcasts
-              </span>
-              <span className="text-[9px] bg-rose-950/60 border border-rose-800/40 text-rose-400 px-2 py-0.5 rounded font-black font-mono">
-                {videoPosts.length} ONLINE
-              </span>
-            </h3>
-
-            <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
-              {videoPosts.map(p => {
-                const isQueued = videoQueue.some(item => item.id === p.id);
-                return (
-                  <div
-                    key={p.id}
-                    className={`p-2.5 rounded-xl border flex items-center justify-between gap-2.5 transition ${
-                      selectedPost?.id === p.id
-                        ? 'bg-rose-950/20 border-rose-500 text-slate-100 shadow'
-                        : 'border-slate-850 hover:border-slate-800 text-slate-400 bg-slate-950/20'
-                    }`}
-                  >
-                    <div 
-                      onClick={() => handleSelectVideo(p)}
-                      className="flex gap-2.5 cursor-pointer flex-grow min-w-0"
-                    >
-                      <div className="w-16 h-12 bg-black rounded-lg overflow-hidden flex-shrink-0 relative">
-                        <img
-                          src={p.mediaThumbnail}
-                          alt={p.title}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-slate-950/40 flex items-center justify-center">
-                          <Play className="w-4 h-4 text-white drop-shadow opacity-80" />
-                        </div>
-                      </div>
-                      <div className="flex-grow min-w-0 space-y-1">
-                        <h4 className="text-xs font-bold text-slate-200 font-sans line-clamp-1">
-                          {p.title}
-                        </h4>
-                        <span className="text-[10px] text-slate-500 font-mono block truncate">
-                          By {p.authorName}
-                        </span>
-                        <span className="text-[9px] bg-slate-900 border border-slate-850 text-slate-400 font-mono px-1 py-0.5 rounded uppercase inline-block">
-                          {p.views?.toLocaleString() || '142'} Views
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Quick Queue Toggle Button */}
+              {/* Inline Create Playlist Form */}
+              {showCreatePlaylistForm && (
+                <div className="p-3 bg-slate-950 border border-cyan-800/40 rounded-xl space-y-2 font-mono text-xs animate-fadeIn">
+                  <span className="text-[10px] uppercase font-bold text-cyan-400 block">Create New Playlist</span>
+                  <input
+                    type="text"
+                    value={newPlaylistTitleInput}
+                    onChange={(e) => setNewPlaylistTitleInput(e.target.value)}
+                    placeholder="Playlist Title (e.g. Cyberpunk Tech)"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs focus:outline-none focus:border-cyan-500"
+                  />
+                  <input
+                    type="text"
+                    value={newPlaylistDescInput}
+                    onChange={(e) => setNewPlaylistDescInput(e.target.value)}
+                    placeholder="Optional short description..."
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-slate-400 text-[11px] focus:outline-none focus:border-cyan-500"
+                  />
+                  <div className="flex items-center justify-end gap-2 pt-1">
                     <button
-                      onClick={(e) => isQueued ? removeFromQueue(p.id, e) : addToQueue(p, e)}
-                      className={`px-2 py-1 border rounded-lg text-[9px] font-mono font-bold uppercase transition flex items-center gap-1 shrink-0 ${
-                        isQueued 
-                          ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-400 hover:bg-red-950/25 hover:border-red-500/30 hover:text-red-400' 
-                          : 'bg-slate-900 border-slate-850 hover:bg-slate-800 text-slate-300 hover:text-rose-400'
-                      }`}
-                      title={isQueued ? "Remove from queue" : "Add to queue"}
+                      onClick={() => setShowCreatePlaylistForm(false)}
+                      className="px-2.5 py-1 text-slate-500 hover:text-slate-300 text-[10px]"
                     >
-                      {isQueued ? (
-                        <>
-                          <CheckCircle className="w-3 h-3 text-emerald-400" />
-                          <span>Queued</span>
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-3 h-3 text-rose-500" />
-                          <span>Queue</span>
-                        </>
-                      )}
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (!newPlaylistTitleInput.trim()) return;
+                        createVideoPlaylist(newPlaylistTitleInput, newPlaylistDescInput);
+                        setNewPlaylistTitleInput('');
+                        setNewPlaylistDescInput('');
+                        setShowCreatePlaylistForm(false);
+                        refreshPlaylists();
+                      }}
+                      className="px-3 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-bold text-[10px] uppercase transition"
+                    >
+                      Create
                     </button>
                   </div>
-                );
-              })}
+                </div>
+              )}
+
+              {/* Viewing an expanded playlist or list of all playlists */}
+              {viewingPlaylistId ? (
+                (() => {
+                  const currentPl = playlists.find(p => p.id === viewingPlaylistId);
+                  if (!currentPl) return null;
+                  return (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between bg-slate-950 p-2.5 rounded-xl border border-slate-850">
+                        <div className="min-w-0 flex-1">
+                          <button
+                            onClick={() => setViewingPlaylistId(null)}
+                            className="text-[10px] text-cyan-400 hover:underline flex items-center gap-1 font-mono mb-1"
+                          >
+                            ← Back to Playlists
+                          </button>
+                          <h4 className="text-xs font-bold text-slate-100 truncate">{currentPl.name}</h4>
+                          <p className="text-[10px] text-slate-400">{currentPl.items.length} items</p>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            onClick={() => handlePlayPlaylist(currentPl)}
+                            className="px-2.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-mono text-[10px] font-bold uppercase rounded-lg transition flex items-center gap-1 shadow"
+                          >
+                            <Play className="w-3 h-3 fill-white" />
+                            <span>Play All</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Items in this playlist */}
+                      <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                        {currentPl.items.length > 0 ? (
+                          currentPl.items.map((item, idx) => (
+                            <div
+                              key={item.id + '_' + idx}
+                              className="p-2 bg-slate-950/60 border border-slate-900 rounded-xl flex items-center justify-between gap-2 text-xs font-sans group"
+                            >
+                              <div 
+                                onClick={() => handleSelectVideo(item.post)}
+                                className="flex items-center gap-2 min-w-0 cursor-pointer flex-1"
+                              >
+                                <span className="text-[10px] font-mono text-slate-500 w-4 text-center">
+                                  {idx + 1}
+                                </span>
+                                <div className="w-12 h-9 bg-black rounded overflow-hidden flex-shrink-0">
+                                  <img src={item.mediaThumbnail} alt={item.title} className="w-full h-full object-cover" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <h4 className="text-xs font-bold text-slate-200 truncate group-hover:text-cyan-400 transition">
+                                    {item.title}
+                                  </h4>
+                                  <span className="text-[9px] text-slate-500 font-mono block truncate">
+                                    {item.authorName}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <button
+                                onClick={() => {
+                                  removeVideoFromPlaylist(currentPl.id, item.id);
+                                  refreshPlaylists();
+                                }}
+                                className="text-slate-600 hover:text-rose-400 p-1 transition shrink-0"
+                                title="Remove from playlist"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-center py-6 px-4 bg-slate-950/30 border border-dashed border-slate-900 rounded-xl text-[10px] text-slate-500 font-mono space-y-1">
+                            <p>This playlist is empty.</p>
+                            <p className="text-slate-600">Click "Save" on any video to add it here.</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()
+              ) : (
+                /* List of all playlists */
+                <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+                  {playlists.map((pl) => (
+                    <div
+                      key={pl.id}
+                      className="p-3 bg-slate-950/60 border border-slate-900 hover:border-slate-800 rounded-xl transition flex items-center justify-between gap-3 group"
+                    >
+                      <div 
+                        onClick={() => setViewingPlaylistId(pl.id)}
+                        className="flex-1 min-w-0 cursor-pointer space-y-1"
+                      >
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-xs font-bold text-slate-200 group-hover:text-cyan-400 transition truncate">
+                            {pl.name}
+                          </h4>
+                          {pl.isDefault && (
+                            <span className="text-[8px] bg-slate-900 border border-slate-800 text-slate-400 px-1 py-0.2 rounded font-mono uppercase">
+                              SYSTEM
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-slate-400 line-clamp-1">{pl.description || `${pl.items.length} items`}</p>
+                        <div className="flex items-center gap-2 text-[9px] font-mono text-slate-500">
+                          <span>{pl.items.length} videos</span>
+                          <span>•</span>
+                          <span>Updated {new Date(pl.updatedAt).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={() => handlePlayPlaylist(pl)}
+                          disabled={pl.items.length === 0}
+                          className="p-2 bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-800/60 text-cyan-300 rounded-lg text-[10px] font-mono transition disabled:opacity-40"
+                          title="Play all videos continuously"
+                        >
+                          <Play className="w-3.5 h-3.5 fill-current" />
+                        </button>
+
+                        {!pl.isDefault && (
+                          <button
+                            onClick={() => {
+                              if (confirm(`Delete playlist "${pl.name}"?`)) {
+                                deleteVideoPlaylist(pl.id);
+                                refreshPlaylists();
+                              }
+                            }}
+                            className="p-2 text-slate-600 hover:text-rose-400 hover:bg-slate-900 rounded-lg transition"
+                            title="Delete playlist"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
+          )}
+
+          {/* TAB 4: WATCH HISTORY */}
+          {activeSidebarTab === 'history' && (
+            <div className="bg-[#0A0F1D] border border-slate-900 rounded-2xl p-4 space-y-3.5 shadow-xl">
+              <div className="flex items-center justify-between border-b border-slate-900 pb-2">
+                <h3 className="text-xs font-bold text-slate-200 font-mono uppercase tracking-wider flex items-center gap-1.5">
+                  <History className="w-4 h-4 text-amber-400" />
+                  <span>Watch History</span>
+                  <span className="text-[10px] bg-amber-950/60 border border-amber-800/40 text-amber-300 px-1.5 py-0.2 rounded font-mono font-bold">
+                    {watchHistory.length}
+                  </span>
+                </h3>
+                {watchHistory.length > 0 && (
+                  <button
+                    onClick={() => {
+                      clearVideoWatchHistory();
+                      refreshHistory();
+                    }}
+                    className="text-[9px] text-slate-500 hover:text-rose-400 font-mono uppercase font-bold transition-colors"
+                  >
+                    Clear History
+                  </button>
+                )}
+              </div>
+
+              {watchHistory.length > 0 ? (
+                <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+                  {watchHistory.map((item) => {
+                    const isCurrent = selectedPost?.id === item.id;
+                    const progressPercent = Math.min(100, Math.round((item.lastPositionSeconds / (item.durationSeconds || 100)) * 100));
+
+                    return (
+                      <div
+                        key={item.id + '_' + item.watchedAt}
+                        className={`p-2.5 rounded-xl border flex items-center justify-between gap-2.5 transition ${
+                          isCurrent
+                            ? 'bg-amber-950/30 border-amber-500/60 text-slate-100 shadow-sm'
+                            : 'bg-slate-950/60 border-slate-850 hover:border-slate-700 text-slate-300 hover:bg-slate-900'
+                        }`}
+                      >
+                        <div 
+                          onClick={() => handleSelectVideo(item.post, item.lastPositionSeconds)}
+                          className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer"
+                        >
+                          <div className="w-14 h-10 bg-black rounded-lg overflow-hidden flex-shrink-0 relative">
+                            <img
+                              src={item.mediaThumbnail}
+                              alt={item.title}
+                              className="w-full h-full object-cover"
+                            />
+                            {/* Watched progress bar inside thumbnail */}
+                            <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/60">
+                              <div 
+                                className="h-full bg-rose-500" 
+                                style={{ width: `${progressPercent}%` }} 
+                              />
+                            </div>
+                            {isCurrent && (
+                              <div className="absolute inset-0 bg-amber-500/30 flex items-center justify-center">
+                                <Play className="w-3.5 h-3.5 text-amber-300 fill-current" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1 space-y-0.5">
+                            <h4 className="text-xs font-bold text-slate-200 truncate font-sans">
+                              {item.title}
+                            </h4>
+                            <div className="flex items-center justify-between text-[9px] font-mono text-slate-400">
+                              <span className="truncate">By {item.authorName}</span>
+                              {isCurrent ? (
+                                <span className="text-amber-400 font-bold uppercase">Now Playing</span>
+                              ) : (
+                                <span className="text-slate-500">
+                                  {formatVideoDuration(item.lastPositionSeconds)} watched ({progressPercent}%)
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => handleSelectVideo(item.post, item.lastPositionSeconds)}
+                            className="p-1.5 text-amber-400 hover:bg-amber-950/40 rounded-lg text-[9px] font-mono transition"
+                            title={`Resume at ${formatVideoDuration(item.lastPositionSeconds)}`}
+                          >
+                            <Play className="w-3.5 h-3.5 fill-current" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              removeVideoWatchHistoryItem(item.id);
+                              refreshHistory();
+                            }}
+                            className="p-1.5 text-slate-600 hover:text-rose-400 hover:bg-slate-900 rounded-lg transition"
+                            title="Remove from history"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8 px-4 bg-slate-950/30 border border-dashed border-slate-900 rounded-xl text-[10px] text-slate-500 font-mono space-y-1">
+                  <History className="w-6 h-6 text-slate-700 mx-auto" />
+                  <p>No watch history yet.</p>
+                  <p className="text-slate-600">Videos you play will automatically record watch positions so you can resume anytime.</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 5: PLAY QUEUE */}
+          {activeSidebarTab === 'queue' && (
+            <div className="bg-[#0A0F1D] border border-slate-900 rounded-2xl p-4 space-y-4 shadow-xl">
+              <div className="flex items-center justify-between border-b border-slate-900 pb-2">
+                <h3 className="text-xs font-bold text-slate-200 font-mono uppercase tracking-wider flex items-center gap-1.5">
+                  <ListPlus className="w-4 h-4 text-cyan-400 animate-pulse" />
+                  <span>Play Queue</span>
+                  {activePlaylistTitle && (
+                    <span className="text-[9px] bg-cyan-950 border border-cyan-800 text-cyan-300 px-1.5 rounded truncate max-w-[120px]">
+                      {activePlaylistTitle}
+                    </span>
+                  )}
+                </h3>
+                {videoQueue.length > 0 && (
+                  <button
+                    onClick={clearQueue}
+                    className="text-[9px] text-slate-500 hover:text-rose-400 font-mono uppercase font-bold transition-colors"
+                  >
+                    Clear Queue
+                  </button>
+                )}
+              </div>
+
+              {videoQueue.length > 0 ? (
+                <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+                  {videoQueue.map((p, idx) => (
+                    <div
+                      key={`${p.id}_q_${idx}`}
+                      className="p-2 bg-slate-950/60 border border-slate-900 rounded-xl flex items-center justify-between gap-2 text-xs font-sans group relative"
+                    >
+                      <div 
+                        onClick={() => handleSelectVideo(p)}
+                        className="flex items-center gap-2 min-w-0 cursor-pointer flex-1"
+                      >
+                        <span className="text-[10px] font-mono text-cyan-500 font-bold w-4 text-center">
+                          {idx + 1}
+                        </span>
+                        <div className="w-10 h-8 bg-black rounded overflow-hidden flex-shrink-0">
+                          <img src={p.mediaThumbnail} alt={p.title} className="w-full h-full object-cover" />
+                        </div>
+                        <div className="min-w-0 w-full">
+                          <h4 className="text-xs font-bold text-slate-200 truncate pr-2 group-hover:text-cyan-400 transition">
+                            {p.title}
+                          </h4>
+                          <span className="text-[9px] text-slate-500 font-mono block">
+                            {p.authorName}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={(e) => removeFromQueue(p.id, e)}
+                        className="text-slate-500 hover:text-red-400 p-1 rounded-md transition hover:bg-slate-900 shrink-0"
+                        title="Remove from play queue"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                  
+                  {/* Active "Up Next" preview */}
+                  <div className="p-2.5 bg-cyan-950/20 border border-cyan-500/30 rounded-xl text-[10px] font-mono text-cyan-400 flex items-center gap-2 mt-2">
+                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping shrink-0" />
+                    <span className="truncate">Up Next: <strong className="font-bold">{videoQueue[0].title}</strong></span>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 px-4 bg-slate-950/30 border border-dashed border-slate-900 rounded-xl text-[10px] text-slate-500 font-mono space-y-1">
+                  <ListPlus className="w-6 h-6 text-slate-700 mx-auto" />
+                  <p>Play queue is empty.</p>
+                  <p className="text-slate-600">Click "+ Queue" on any video to build an auto-advancing stream sequence.</p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Sponsored Ad Banner Sidebar Placement */}
           {!isPremium && (
@@ -1542,6 +2144,17 @@ export default function VideoTheaterSection({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Playlist Selector & Management Modal */}
+      {playlistModalPost && (
+        <VideoPlaylistModal
+          post={playlistModalPost}
+          onClose={() => {
+            setPlaylistModalPost(null);
+            refreshPlaylists();
+          }}
+        />
       )}
     </div>
   );

@@ -20,6 +20,7 @@ import {
   ShieldCheck,
   DollarSign
 } from 'lucide-react';
+import { VideoProgressBar } from './VideoProgressBar';
 
 interface CustomHlsPlayerProps {
   key?: React.Key;
@@ -27,9 +28,11 @@ interface CustomHlsPlayerProps {
   poster?: string;
   title?: string;
   autoPlay?: boolean;
+  initialTime?: number;
   onEnded?: () => void;
   onPause?: () => void;
   onPlay?: () => void;
+  onTimeUpdateCallback?: (time: number, dur: number) => void;
   isLiteMode?: boolean;
   onMonetizationEvent?: (desc: string, rewardUSD: number) => void;
   creatorName?: string;
@@ -40,9 +43,11 @@ export default function CustomHlsPlayer({
   poster,
   title = 'Broadcast Stream',
   autoPlay = false,
+  initialTime = 0,
   onEnded,
   onPause,
   onPlay,
+  onTimeUpdateCallback,
   isLiteMode = false,
   onMonetizationEvent,
   creatorName = 'Bios Styles'
@@ -173,12 +178,19 @@ export default function CustomHlsPlayer({
     if (video.buffered.length > 0) {
       setBuffered(video.buffered.end(video.buffered.length - 1));
     }
+    if (onTimeUpdateCallback) {
+      onTimeUpdateCallback(video.currentTime, video.duration || 0);
+    }
   };
 
   const handleLoadedMetadata = () => {
     const video = videoRef.current;
     if (!video) return;
     setDuration(video.duration);
+    if (initialTime > 0 && initialTime < video.duration) {
+      video.currentTime = initialTime;
+      setCurrentTime(initialTime);
+    }
   };
 
   const togglePlay = () => {
@@ -464,31 +476,19 @@ export default function CustomHlsPlayer({
       }`}>
         
         {/* Seek Bar Slider with Progress Buffer */}
-        <div className="relative group/seek flex items-center h-2 cursor-pointer">
-          {/* Buffer Track */}
-          <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-1 bg-slate-800 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-slate-600 transition-all"
-              style={{ width: `${(buffered / (duration || 1)) * 100}%` }}
-            />
-          </div>
-          {/* Played Track */}
-          <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-1 bg-slate-800 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-rose-600 to-amber-500"
-              style={{ width: `${(currentTime / (duration || 1)) * 100}%` }}
-            />
-          </div>
-          {/* Input Range */}
-          <input
-            type="range"
-            min={0}
-            max={duration || 100}
-            value={currentTime}
-            onChange={handleSeek}
-            className="w-full h-2 opacity-0 cursor-pointer z-10"
-          />
-        </div>
+        <VideoProgressBar
+          currentTime={currentTime}
+          duration={duration}
+          buffered={buffered}
+          onSeek={(time) => {
+            if (videoRef.current) {
+              videoRef.current.currentTime = time;
+              setCurrentTime(time);
+            }
+          }}
+          colorScheme="rose"
+          showHoverTime={true}
+        />
 
         {/* Control Buttons Deck */}
         <div className="flex items-center justify-between text-slate-200 text-xs font-mono">
