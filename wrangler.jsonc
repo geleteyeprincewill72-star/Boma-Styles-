@@ -1,0 +1,25 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "aura-sovereign-network",
+  "main": "server.ts",
+  "compatibility_date": "2024-09-23",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "html_handling": "single-page-application",
+    "not_found_handling": "single-page-application"
+  },
+  "vars": {
+    "NODE_ENV": "production",
+    "FIREBASE_PROJECT_ID": "aura-8fda0"
+  },
+  "routes": [
+    {
+      "pattern": "*",
+      "zone_name": ""
+    }
+  ]
+}

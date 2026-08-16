@@ -20,6 +20,21 @@
       },
       "required": ["uid", "username", "displayName", "email", "role", "createdAt"]
     },
+    "Post": {
+      "title": "Feed Post",
+      "description": "Social feed content, videos, media or text.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorPublicKey": { "type": "string" },
+        "authorAvatar": { "type": "string" },
+        "content": { "type": "string" },
+        "type": { "type": "string" },
+        "timestamp": { "type": "integer" }
+      },
+      "required": ["id", "authorName", "content", "timestamp"]
+    },
     "Chat": {
       "title": "Chat Conversation",
       "description": "A private one-to-one or group (Circle) chat room.",
@@ -32,6 +47,7 @@
         "lastMessage": { "type": "string" },
         "lastMessageTime": { "type": "integer" },
         "lastMessageSender": { "type": "string" },
+        "retentionDays": { "type": "integer" },
         "createdAt": { "type": "integer" }
       },
       "required": ["id", "type", "members", "createdAt"]
@@ -121,6 +137,10 @@
     "users/{userId}": {
       "schema": "User",
       "description": "Registered users profiles"
+    },
+    "posts/{postId}": {
+      "schema": "Post",
+      "description": "Public social feed posts"
     },
     "ai_threads/{userId}/messages/{messageId}": {
       "schema": "AiMessage",

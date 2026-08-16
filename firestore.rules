@@ -19,7 +19,6 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && (
         exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
         request.auth.token.email == 'geleteyeprincewill72@gmail.com'
       );
     }
@@ -34,14 +33,21 @@ service cloud.firestore {
     }
 
     // --- USER PROFILES ---
+    // Users can read public profiles, create their own profile without self-assigning admin,
+    // and update their profile without changing the role field.
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isOwner(userId) || isAdmin();
+      allow create: if isSignedIn() && request.auth.uid == userId && (
+        !('role' in request.resource.data) || request.resource.data.role == 'user' || isAdmin()
+      );
+      allow update: if (isOwner(userId) && (
+        !('role' in request.resource.data) || request.resource.data.role == resource.data.role
+      )) || isAdmin();
       allow delete: if isAdmin();
     }
 
     // --- AI ASSISTANT CHAT THREADS ---
+    // Strictly private to the authenticated owner
     match /ai_threads/{userId}/messages/{messageId} {
       allow read, write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
     }
@@ -62,8 +68,12 @@ service cloud.firestore {
       // Messages sub-collection
       match /messages/{messageId} {
         allow read: if isSignedIn() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.members || isAdmin());
-        allow create, update: if isSignedIn() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.members || isAdmin());
-        allow delete: if isAdmin();
+        allow create: if isSignedIn() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.members);
+        allow update, delete: if isSignedIn() && (
+          resource.data.senderId == request.auth.uid || 
+          request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.members ||
+          isAdmin()
+        );
       }
     }
 
@@ -72,7 +82,11 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isSignedIn() && isValidId(postId);
       allow update: if isSignedIn() && isValidId(postId);
-      allow delete: if isSignedIn() && (resource.data.authorPublicKey == request.auth.uid || isAdmin());
+      allow delete: if isSignedIn() && (
+        resource.data.authorPublicKey == request.auth.uid || 
+        resource.data.authorUid == request.auth.uid || 
+        isAdmin()
+      );
     }
 
     // --- FOLLOWS SYSTEM ---
@@ -103,7 +117,7 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // --- HERITAGE MOUNTING PLACES ---
+    // --- CREATOR STUDIO CHARACTERS & SCREENPLAY ---
     match /characters/{charId} {
       allow read: if true;
       allow create, update: if isSignedIn();
@@ -125,7 +139,7 @@ service cloud.firestore {
     // --- PAYMENT CONFIGURATION ---
     match /payment_config/{configId} {
       allow read: if true;
-      allow write: if isSignedIn();
+      allow write: if isAdmin();
     }
   }
 }

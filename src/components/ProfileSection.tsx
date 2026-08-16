@@ -13,9 +13,14 @@ import {
   Copy, 
   Check, 
   Settings,
-  Share2
+  Share2,
+  Film,
+  PlaySquare,
+  ListMusic,
+  Clock
 } from 'lucide-react';
 import { FeedPost } from '../types';
+import { getAutoPlayOnScroll, setAutoPlayOnScroll, getVideoWatchHistory, getVideoPlaylists } from '../utils/videoEngine';
 
 interface ProfileSectionProps {
   username: string;
@@ -41,7 +46,17 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
   theme = 'dark',
 }) => {
   const [copiedKey, setCopiedKey] = useState(false);
+  const [feedAutoplay, setFeedAutoplay] = useState(() => getAutoPlayOnScroll());
+  const [historyCount] = useState(() => getVideoWatchHistory().length);
+  const [playlistsCount] = useState(() => getVideoPlaylists().length);
+
   const userPosts = posts.filter((p) => p.authorName === username || p.authorPublicKey === myPublicKey);
+
+  const handleToggleFeedAutoplay = () => {
+    const nextVal = !feedAutoplay;
+    setFeedAutoplay(nextVal);
+    setAutoPlayOnScroll(nextVal);
+  };
 
   const handleCopyKey = () => {
     navigator.clipboard.writeText(myPublicKey);
@@ -136,6 +151,82 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
                 <span className="text-[10px] text-slate-400 font-mono block uppercase mt-0.5">AI Access</span>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Video Theater & Playback Preferences Card */}
+      <div className="rounded-3xl bg-[#0F1526] border border-slate-800/80 p-5 space-y-4 shadow-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-850 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-2xl bg-rose-950/60 border border-rose-800/50 text-rose-400">
+              <Film className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white font-sans flex items-center gap-2">
+                <span>Video Theater & Playback Hub</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-rose-950/80 border border-rose-800/60 text-rose-300">
+                  Enhanced
+                </span>
+              </h3>
+              <p className="text-xs text-slate-400 font-mono mt-0.5">
+                Playlists, watch history, personalized recommendations & feed streaming
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => onNavigateTab('video')}
+            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-mono text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md"
+          >
+            <PlaySquare className="w-4 h-4" />
+            <span>Launch Video Theater</span>
+          </button>
+        </div>
+
+        {/* Video Preferences Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {/* Autoplay on scroll toggle */}
+          <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-850 flex items-center justify-between gap-3">
+            <div>
+              <span className="text-xs font-bold text-slate-200 block">Feed Autoplay</span>
+              <span className="text-[10px] text-slate-400 font-mono">Auto-play on scroll</span>
+            </div>
+            <button
+              onClick={handleToggleFeedAutoplay}
+              className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold border transition flex items-center gap-1.5 ${
+                feedAutoplay
+                  ? 'bg-emerald-950/80 border-emerald-600 text-emerald-300'
+                  : 'bg-slate-900 border-slate-750 text-slate-400'
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full ${feedAutoplay ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
+              <span>{feedAutoplay ? 'ON' : 'OFF'}</span>
+            </button>
+          </div>
+
+          {/* Watch History quick stat */}
+          <div 
+            onClick={() => onNavigateTab('video')} 
+            className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-850 hover:border-slate-700 cursor-pointer transition flex items-center justify-between"
+          >
+            <div>
+              <span className="text-xs font-bold text-slate-200 block">Watch History</span>
+              <span className="text-[10px] text-slate-400 font-mono">{historyCount} videos recorded</span>
+            </div>
+            <Clock className="w-4 h-4 text-cyan-400" />
+          </div>
+
+          {/* Saved Playlists quick stat */}
+          <div 
+            onClick={() => onNavigateTab('video')} 
+            className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-850 hover:border-slate-700 cursor-pointer transition flex items-center justify-between"
+          >
+            <div>
+              <span className="text-xs font-bold text-slate-200 block">Saved Playlists</span>
+              <span className="text-[10px] text-slate-400 font-mono">{playlistsCount} custom lists</span>
+            </div>
+            <ListMusic className="w-4 h-4 text-purple-400" />
           </div>
         </div>
       </div>

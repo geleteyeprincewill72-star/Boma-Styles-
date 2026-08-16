@@ -150,6 +150,10 @@ export default function VideoTheaterSection({
   };
 
   const handleSelectVideo = (post: FeedPost, startPos = 0) => {
+    const triggerAd = Math.random() < 0.35 && !isPremium;
+    if (triggerAd) {
+      triggerWebSponsorAd('interstitial');
+    }
     setSelectedPost(post);
     setResumeTime(startPos);
     setIsVideoPlaying(true);
@@ -398,15 +402,6 @@ export default function VideoTheaterSection({
   // Google AdSense state tracking
   const [impressions, setImpressions] = useState(240);
   const [earnings, setEarnings] = useState(12.80);
-
-  // Show Interstitial on video change (30% chance)
-  const handleSelectVideo = (post: FeedPost) => {
-    const triggerAd = Math.random() < 0.35 && !isPremium;
-    if (triggerAd) {
-      triggerWebSponsorAd('interstitial');
-    }
-    setSelectedPost(post);
-  };
 
   const triggerWebSponsorAd = (type: 'interstitial' | 'rewarded') => {
     setAdType(type);

@@ -26,7 +26,8 @@ import {
 import { listenToPaymentConfig, PaymentConfig } from '../utils/firebase';
 import { Language, SUPPORTED_LANGUAGES } from '../utils/translations';
 import DeviceSecurityModal from './DeviceSecurityModal';
-import { ShieldCheck, Lock } from 'lucide-react';
+import { ShieldCheck, Lock, Play, Video } from 'lucide-react';
+import { getAutoPlayOnScroll, setAutoPlayOnScroll } from '../utils/videoEngine';
 
 interface SettingsModalProps {
   username: string;
@@ -65,6 +66,16 @@ export default function SettingsModal({
   const [profileAvatar, setProfileAvatar] = useState(avatar);
   const [profileStatus, setProfileStatus] = useState(userStatus);
   const [compileMethod, setCompileMethod] = useState<'termux' | 'studio'>('termux');
+  const [feedAutoplay, setFeedAutoplay] = useState<boolean>(() => getAutoPlayOnScroll());
+
+  const handleToggleFeedAutoplay = () => {
+    const nextVal = !feedAutoplay;
+    setFeedAutoplay(nextVal);
+    setAutoPlayOnScroll(nextVal);
+    if (triggerNotification) {
+      triggerNotification(`Feed video autoplay ${nextVal ? 'enabled' : 'disabled'}`);
+    }
+  };
   const [paymentConfig, setPaymentConfig] = useState<PaymentConfig>({
     bankName: 'OPAY',
     accountNumber: '081545616121',
@@ -308,6 +319,31 @@ export default function SettingsModal({
                 </select>
               </div>
             </div>
+          </div>
+
+          {/* Feed Video Autoplay Preference */}
+          <div className="pt-2 border-t border-slate-800/40 flex items-center justify-between">
+            <div>
+              <span className="text-xs font-bold font-sans flex items-center gap-1.5 text-rose-400">
+                <Video className="w-4 h-4 text-rose-400" />
+                <span>Feed Video Autoplay on Scroll</span>
+              </span>
+              <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                Automatically play video streams when scrolling through the main feed
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleToggleFeedAutoplay}
+              className={`px-3 py-1 rounded-lg border font-mono font-bold text-xs transition flex items-center gap-1.5 ${
+                feedAutoplay
+                  ? 'bg-emerald-950 border-emerald-500/60 text-emerald-300'
+                  : 'bg-slate-900 border-slate-750 text-slate-400'
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full ${feedAutoplay ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
+              <span>{feedAutoplay ? 'ENABLED' : 'DISABLED'}</span>
+            </button>
           </div>
 
           {/* Device Security & Anti-Theft Section */}
