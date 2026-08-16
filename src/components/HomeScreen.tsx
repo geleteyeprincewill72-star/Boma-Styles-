@@ -78,8 +78,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs font-mono font-bold">
-              <Sparkles className="w-3.5 h-3.5 text-purple-400 animate-pulse" />
-              <span>AURA DECENTRALIZED PLATFORM</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-emerald-300 font-bold">LIVE PRODUCTION MODE</span>
+              <span className="text-slate-500">|</span>
+              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+              <span>AURA SOVEREIGN NETWORK</span>
             </div>
             <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight font-sans">
               Welcome to <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">Aura</span>, {username}!

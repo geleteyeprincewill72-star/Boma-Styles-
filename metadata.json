@@ -1,8 +1,10 @@
 {
   "name": "Aura",
-  "description": "The premium, privacy-first sovereign social media and creative storytelling platform featuring real-time messaging, secure cryptographic authentication, global notifications, and Swarm-scale administrative operations.",
+  "description": "The premium, privacy-first sovereign social media and creative storytelling platform featuring real-time messaging, live audio/video calls, secure cryptographic authentication, global notifications, and Swarm-scale administrative operations.",
   "requestFramePermissions": [
-    "microphone"
+    "camera",
+    "microphone",
+    "geolocation"
   ],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

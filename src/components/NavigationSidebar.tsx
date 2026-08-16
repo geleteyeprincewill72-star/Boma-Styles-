@@ -104,8 +104,9 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
             <span className="text-[10px] uppercase font-mono font-bold text-slate-400 tracking-wider">
               Aura Navigation
             </span>
-            <span className="text-[9px] font-mono text-purple-400 bg-purple-950/80 border border-purple-800 px-2 py-0.5 rounded-full">
-              Swarm v2.6
+            <span className="inline-flex items-center gap-1.5 text-[9px] font-mono font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-500/40 px-2 py-0.5 rounded-full shadow-sm shadow-emerald-900/30">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+              <span>LIVE MODE</span>
             </span>
           </div>
 

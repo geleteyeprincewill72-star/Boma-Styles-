@@ -1469,6 +1469,10 @@ export default function App() {
               </span>
             </div>
           </div>
+          <div className="flex items-center gap-1.5 bg-emerald-950/40 px-2 py-0.5 rounded-lg border border-emerald-500/40 shadow-sm">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+            <span className="text-[9px] text-emerald-300 font-mono font-bold tracking-wider uppercase">LIVE NETWORK</span>
+          </div>
           <div className="flex items-center gap-1 bg-cyan-950/30 px-1.5 py-0.5 rounded border border-cyan-800/40">
             <ShieldCheck className="w-3 h-3 text-cyan-400" />
             <span className="text-[9px] text-cyan-400 font-mono tracking-widest uppercase scale-95 origin-left">{t('secureStamp')}</span>
