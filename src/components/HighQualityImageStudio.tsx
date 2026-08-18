@@ -45,6 +45,7 @@ interface HighQualityImageStudioProps {
   avatar: string;
   onShareToFeed?: (post: Partial<FeedPost>) => void;
   onSetAvatar?: (avatarUrl: string) => void;
+  onAnimateImage?: (imageUrl: string, prompt?: string) => void;
   theme?: 'dark' | 'light';
 }
 
@@ -90,6 +91,7 @@ export const HighQualityImageStudio: React.FC<HighQualityImageStudioProps> = ({
   avatar,
   onShareToFeed,
   onSetAvatar,
+  onAnimateImage,
   theme = 'dark'
 }) => {
   const isLight = theme === 'light';
@@ -670,7 +672,17 @@ export const HighQualityImageStudio: React.FC<HighQualityImageStudioProps> = ({
               </div>
 
               {/* Action Buttons Footer */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+                {onAnimateImage && (
+                  <button
+                    onClick={() => onAnimateImage(activeImage.url, activeImage.prompt)}
+                    className="py-2 px-3 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white rounded-xl text-xs font-mono font-bold transition flex items-center justify-center gap-1.5 shadow"
+                  >
+                    <Film className="w-3.5 h-3.5" />
+                    <span>Animate Video</span>
+                  </button>
+                )}
+
                 <button
                   onClick={() => handleDownloadImage(activeImage)}
                   className="py-2 px-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl text-xs font-mono font-bold transition flex items-center justify-center gap-1.5 shadow"
@@ -686,7 +698,7 @@ export const HighQualityImageStudio: React.FC<HighQualityImageStudioProps> = ({
                   {sharedId === activeImage.id ? (
                     <>
                       <Check className="w-3.5 h-3.5 text-emerald-300 animate-bounce" />
-                      <span>Posted to Feed!</span>
+                      <span>Posted!</span>
                     </>
                   ) : (
                     <>
@@ -703,12 +715,12 @@ export const HighQualityImageStudio: React.FC<HighQualityImageStudioProps> = ({
                   {avatarSetId === activeImage.id ? (
                     <>
                       <Check className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Avatar Updated!</span>
+                      <span>Avatar Set</span>
                     </>
                   ) : (
                     <>
                       <Camera className="w-3.5 h-3.5 text-purple-400" />
-                      <span>Use as Avatar</span>
+                      <span>Set Avatar</span>
                     </>
                   )}
                 </button>

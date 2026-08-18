@@ -21,7 +21,12 @@ import {
   TrendingUp,
   BrainCircuit,
   Image as ImageIcon,
-  Mic
+  Mic,
+  Film,
+  Globe,
+  Wand2,
+  Layers,
+  MessageSquareCode
 } from 'lucide-react';
 
 export type TabType = 
@@ -30,7 +35,11 @@ export type TabType =
   | 'friends' 
   | 'calls' 
   | 'omnimind' 
+  | 'search'
   | 'imagegen'
+  | 'videogen'
+  | 'aitools'
+  | 'mycreations'
   | 'audio'
   | 'feed' 
   | 'videos' 
@@ -73,7 +82,11 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   const NAV_ITEMS = [
     { id: 'home', label: 'HOME', icon: Home, badge: null, color: 'text-purple-400' },
     { id: 'omnimind', label: 'AI ASSISTANT', icon: Bot, badge: 'AI', color: 'text-purple-400' },
+    { id: 'search', label: 'AI WEB SEARCH', icon: Globe, badge: 'Live', color: 'text-cyan-400' },
     { id: 'imagegen', label: 'AI IMAGE GEN', icon: ImageIcon, badge: '4K', color: 'text-purple-300' },
+    { id: 'videogen', label: 'AI VIDEO GEN', icon: Film, badge: 'Veo', color: 'text-amber-400' },
+    { id: 'aitools', label: 'AI TOOLS HUB', icon: Wand2, badge: '12+', color: 'text-pink-400' },
+    { id: 'mycreations', label: 'MY CREATIONS', icon: Layers, badge: null, color: 'text-indigo-400' },
     { id: 'audio', label: 'AUDIO TRANSCRIBE', icon: Mic, badge: 'AI', color: 'text-cyan-300' },
     { id: 'messages', label: 'MESSAGES', icon: MessageSquare, badge: null, color: 'text-cyan-400' },
     { id: 'calls', label: 'CALLS', icon: PhoneCall, badge: null, color: 'text-emerald-400' },
@@ -82,6 +95,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
     { id: 'videos', label: 'VIDEO HUB', icon: Video, badge: null, color: 'text-amber-400' },
     { id: 'notifications', label: 'NOTIFICATIONS', icon: Bell, badge: unreadNotifCount > 0 ? unreadNotifCount : null, color: 'text-cyan-400' },
     { id: 'profile', label: 'PROFILE', icon: User, badge: null, color: 'text-purple-400' },
+    { id: 'reviews', label: 'REVIEWS & RATING', icon: MessageSquareCode, badge: '5★', color: 'text-amber-400' },
     { id: 'settings', label: 'SETTINGS', icon: Settings, badge: null, color: 'text-amber-400' },
     { id: 'wallet', label: 'WALLET', icon: Wallet, badge: null, color: 'text-emerald-400' },
   ];

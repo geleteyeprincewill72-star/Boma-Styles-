@@ -136,6 +136,36 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // --- APP UPDATES & WEEKLY RELEASES ---
+    match /app_updates/{updateId} {
+      allow read: if resource.data.status == 'published' || isAdmin();
+      allow list: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // --- USER FEEDBACK & REVIEWS ---
+    match /feedback_reviews/{reviewId} {
+      allow read: if resource.data.status == 'approved' || (isSignedIn() && resource.data.ownerId == request.auth.uid) || isAdmin();
+      allow list: if true;
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if (isSignedIn() && resource.data.ownerId == request.auth.uid && request.resource.data.status == resource.data.status) || isAdmin();
+      allow delete: if (isSignedIn() && resource.data.ownerId == request.auth.uid) || isAdmin();
+    }
+
+    // --- REVIEW MODERATION REPORTS ---
+    match /review_reports/{reportId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
+    }
+
+    // --- CREATOR WITHDRAWALS & PAYOUTS ---
+    match /withdrawals/{withdrawalId} {
+      allow read: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
     // --- PAYMENT CONFIGURATION ---
     match /payment_config/{configId} {
       allow read: if true;

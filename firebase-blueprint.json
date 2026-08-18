@@ -127,6 +127,57 @@
         "connected": { "type": "boolean" },
         "timestamp": { "type": "number" }
       }
+    },
+    "AppUpdate": {
+      "title": "App Update",
+      "description": "Weekly application release notes, improvements, bug fixes, and security updates.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "version": { "type": "string" },
+        "releaseDate": { "type": "string" },
+        "title": { "type": "string" },
+        "status": { "type": "string" },
+        "newFeatures": { "type": "array" },
+        "bugFixes": { "type": "array" },
+        "performanceImprovements": { "type": "array" },
+        "securityImprovements": { "type": "array" },
+        "importantAnnouncements": { "type": "array" },
+        "createdAt": { "type": "integer" }
+      },
+      "required": ["id", "version", "releaseDate", "status", "createdAt"]
+    },
+    "FeedbackReview": {
+      "title": "User Feedback Review",
+      "description": "User reviews, star ratings, categorized suggestions, and bug reports.",
+      "type": "object",
+      "properties": {
+        "reviewId": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "rating": { "type": "integer" },
+        "comment": { "type": "string" },
+        "category": { "type": "string" },
+        "suggestion": { "type": "string" },
+        "isAnonymous": { "type": "boolean" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "integer" }
+      },
+      "required": ["reviewId", "ownerId", "rating", "comment", "category", "status", "createdAt"]
+    },
+    "ReviewReport": {
+      "title": "Review Moderation Report",
+      "description": "User report against inappropriate or spam reviews.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "reviewId": { "type": "string" },
+        "reporterUserId": { "type": "string" },
+        "reason": { "type": "string" },
+        "status": { "type": "string" },
+        "timestamp": { "type": "integer" }
+      },
+      "required": ["id", "reviewId", "reporterUserId", "reason", "timestamp"]
     }
   },
   "firestore": {
@@ -161,6 +212,18 @@
     "payment_config/{configId}": {
       "schema": "PaymentConfig",
       "description": "Payment bank name and account details config"
+    },
+    "app_updates/{updateId}": {
+      "schema": "AppUpdate",
+      "description": "Weekly application updates, releases, and changelogs"
+    },
+    "feedback_reviews/{reviewId}": {
+      "schema": "FeedbackReview",
+      "description": "User reviews, star ratings, categorized feedback, and bug reports"
+    },
+    "review_reports/{reportId}": {
+      "schema": "ReviewReport",
+      "description": "Community review moderation reports"
     }
   }
 }

@@ -43,12 +43,13 @@ import {
   FolderArchive,
   Check
 } from 'lucide-react';
-import { KeyPair, FeedPost, Comment, Character, ScreenplayBlock, NetworkNode, Review } from './types';
+import { KeyPair, FeedPost, Comment, Character, ScreenplayBlock, NetworkNode, Review, AppUpdate } from './types';
 import { generateSigningKeyPair } from './utils/crypto';
 import WelcomePrivacyModal from './components/WelcomePrivacyModal';
 import WelcomeConsentModal from './components/WelcomeConsentModal';
 import WebInstallBanner from './components/WebInstallBanner';
 import AppVersionNotifier from './components/AppVersionNotifier';
+import WhatsNewModal from './components/WhatsNewModal';
 import PwaInstallModal from './components/PwaInstallModal';
 import OfflineTrialLockModal from './components/OfflineTrialLockModal';
 import FeedSection from './components/FeedSection';
@@ -68,7 +69,11 @@ import VideoHubSection from './components/VideoHubSection';
 import VideoTheaterSection from './components/VideoTheaterSection';
 import { OmniMindSection } from './components/OmniMindSection';
 import HighQualityImageStudio from './components/HighQualityImageStudio';
+import TextToVideoStudio from './components/TextToVideoStudio';
 import AudioTranscriberStudio from './components/AudioTranscriberStudio';
+import { SearchSection } from './components/SearchSection';
+import { AiToolsSection } from './components/AiToolsSection';
+import { MyCreationsSection } from './components/MyCreationsSection';
 import HomeScreen from './components/HomeScreen';
 import CallsSection from './components/CallsSection';
 import FriendsSection from './components/FriendsSection';
@@ -94,6 +99,8 @@ import {
   saveScreenplayToDb,
   fetchReviewsFromDb,
   saveReviewToDb,
+  fetchAppUpdates,
+  getCurrentDeployedVersion,
   fetchPaymentConfig,
   trackPeerActionMonetization,
   listenToPaymentConfig,
@@ -232,7 +239,7 @@ const INITIAL_NODES: NetworkNode[] = [
 ];
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'home' | 'messages' | 'friends' | 'calls' | 'omnimind' | 'imagegen' | 'audio' | 'feed' | 'videos' | 'notifications' | 'profile' | 'settings' | 'wallet' | 'monetization' | 'reviews' | 'studio' | 'network' | 'admin' | 'discovery'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'messages' | 'friends' | 'calls' | 'omnimind' | 'search' | 'videogen' | 'imagegen' | 'aitools' | 'mycreations' | 'audio' | 'feed' | 'videos' | 'notifications' | 'profile' | 'settings' | 'wallet' | 'monetization' | 'reviews' | 'studio' | 'network' | 'admin' | 'discovery'>('home');
   const [username, setUsername] = useState('AnonPeer_402');
   const [avatar, setAvatar] = useState('https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=60');
   const [userStatus, setUserStatus] = useState<string>(() => {
@@ -273,6 +280,16 @@ export default function App() {
 
   const [gatePasscode, setGatePasscode] = useState('');
   const [gateError, setGateError] = useState('');
+
+  // Multimodal Animation Handoff state (Image -> Veo Video)
+  const [videoInitialImage, setVideoInitialImage] = useState<string>('');
+  const [videoInitialPrompt, setVideoInitialPrompt] = useState<string>('');
+
+  const handleAnimateImage = (imageUrl: string, prompt?: string) => {
+    setVideoInitialImage(imageUrl);
+    if (prompt) setVideoInitialPrompt(prompt);
+    setActiveTab('videogen');
+  };
 
   const [sponsoredAds, setSponsoredAds] = useState<any[]>(() => {
     const cached = localStorage.getItem('aura_sponsored_ads');
@@ -329,8 +346,26 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
 
+  // Weekly App Updates & Release Notes State
+  const [showWhatsNewModal, setShowWhatsNewModal] = useState<boolean>(false);
+  const [appUpdates, setAppUpdates] = useState<AppUpdate[]>([]);
+  const currentRunningVersion = getCurrentDeployedVersion();
+
+  useEffect(() => {
+    const loadUpdates = async () => {
+      try {
+        const updates = await fetchAppUpdates(true);
+        setAppUpdates(updates);
+      } catch (e) {
+        console.warn("Could not fetch app updates in App.tsx:", e);
+      }
+    };
+    loadUpdates();
+  }, []);
+
   const userPhoneClean = (userProfile?.phoneNumber || '').replace(/[^0-9]/g, '');
   const isAppCreator = isCreatorVerified ||
+    currentUser?.email?.toLowerCase() === 'geleteyeprincewill72@gmail.com' ||
     currentUser?.email?.toLowerCase()?.includes('admin@aura.net') ||
     userProfile?.username === 'aura_admin' ||
     userProfile?.role === 'admin' ||
@@ -366,7 +401,17 @@ export default function App() {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [screenplay, setScreenplay] = useState<ScreenplayBlock[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [nodes, setNodes] = useState<NetworkNode[]>(INITIAL_NODES);
+  const [nodes, setNodes] = useState<NetworkNode[]>(() => {
+    try {
+      const cachedCustom = JSON.parse(localStorage.getItem('aura_custom_nodes') || '[]');
+      if (Array.isArray(cachedCustom) && cachedCustom.length > 0) {
+        return [...INITIAL_NODES, ...cachedCustom];
+      }
+    } catch {
+      // ignore
+    }
+    return INITIAL_NODES;
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [searchHistory, setSearchHistory] = useState<string[]>(() => {
     try {
@@ -1082,6 +1127,35 @@ export default function App() {
     }));
   };
 
+  const handleAddNode = (newNode: NetworkNode) => {
+    setNodes(prev => {
+      const exists = prev.some(n => n.id === newNode.id || (newNode.publicKey && n.publicKey === newNode.publicKey));
+      if (exists) return prev;
+      const updated = [...prev, newNode];
+      const customOnly = updated.filter(n => n.isCustom);
+      try {
+        localStorage.setItem('aura_custom_nodes', JSON.stringify(customOnly));
+      } catch (err) {
+        console.warn('Failed saving custom nodes to localStorage:', err);
+      }
+      return updated;
+    });
+    triggerMonetizationEvent(`Linked P2P node via QR scan: ${newNode.name}`, 1.0);
+  };
+
+  const handleRemoveNode = (nodeId: string) => {
+    setNodes(prev => {
+      const updated = prev.filter(n => n.id !== nodeId);
+      const customOnly = updated.filter(n => n.isCustom);
+      try {
+        localStorage.setItem('aura_custom_nodes', JSON.stringify(customOnly));
+      } catch (err) {
+        console.warn('Failed updating custom nodes in localStorage:', err);
+      }
+      return updated;
+    });
+  };
+
   const handleGenerateNewKeys = async () => {
     if (confirm("Generating a new asymmetric identity keypair will replace your existing Swarm signature. Future posts will sign under your new public key, while past posts will remain signed under your old key. Proceed?")) {
       const generated = await generateSigningKeyPair();
@@ -1177,7 +1251,7 @@ export default function App() {
       <AdsterraGlobalScripts />
 
       {/* Operating System / Web Version Update Checker */}
-      <AppVersionNotifier />
+      <AppVersionNotifier onOpenWhatsNew={() => setShowWhatsNewModal(true)} />
       
       {/* Real-time Monetization Ledger Overlay */}
       {latestMonetizationTx && isAppCreator && (
@@ -1478,6 +1552,20 @@ export default function App() {
             <span className="text-[9px] text-cyan-400 font-mono tracking-widest uppercase scale-95 origin-left">{t('secureStamp')}</span>
           </div>
         </div>
+
+        {/* What's New Release Notes Button */}
+        <button
+          id="btn-open-whats-new"
+          onClick={() => setShowWhatsNewModal(true)}
+          className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-violet-950/60 hover:bg-violet-900/70 border border-violet-700/50 text-violet-200 rounded-lg text-xs font-mono font-bold transition shadow-sm hover:scale-[1.02]"
+          title="View weekly app updates, new AI models, performance & security releases"
+        >
+          <Sparkles className="w-3.5 h-3.5 text-violet-400 animate-pulse" />
+          <span>What&apos;s New</span>
+          <span className="text-[9px] bg-violet-900 text-violet-300 px-1 py-0.2 rounded font-mono">
+            v{currentRunningVersion}
+          </span>
+        </button>
 
         {/* First-Time Post Preference Button */}
         <button
@@ -1882,6 +1970,48 @@ export default function App() {
               username={username}
               avatar={avatar}
               onNavigateTab={(tab) => setActiveTab(tab as any)}
+              onAnimateImage={handleAnimateImage}
+            />
+          )}
+
+          {activeTab === 'search' && (
+            <SearchSection
+              username={username}
+              onNavigateTab={(tab) => setActiveTab(tab as any)}
+            />
+          )}
+
+          {activeTab === 'videogen' && (
+            <TextToVideoStudio
+              username={username}
+              avatar={avatar}
+              initialImageUrl={videoInitialImage}
+              initialPrompt={videoInitialPrompt}
+              onShareToFeed={(postData) => {
+                const newPost: FeedPost = {
+                  id: `post_vid_${Date.now()}`,
+                  authorName: username,
+                  authorPublicKey: keys?.publicKey || 'user_pubkey_local',
+                  authorAvatar: avatar,
+                  type: 'play',
+                  title: postData.title,
+                  content: postData.content || '',
+                  mediaUrl: postData.mediaUrl,
+                  timestamp: Date.now(),
+                  signature: 'sig_local_veo_video_gen',
+                  likes: 0,
+                  commentsCount: 0,
+                  comments: [],
+                  isAiPost: true,
+                  aiModel: postData.aiModel || 'Veo 3.1',
+                  aiQualityTier: postData.aiQualityTier || 'HD Cinematic',
+                  aiCapabilities: postData.aiCapabilities || ['Text-to-Video', 'Neural Motion']
+                };
+                handleAddPost(newPost);
+                setActiveTab('feed');
+              }}
+              onNavigateToTab={(tab) => setActiveTab(tab as any)}
+              theme={theme}
             />
           )}
 
@@ -1889,6 +2019,7 @@ export default function App() {
             <HighQualityImageStudio
               username={username}
               avatar={avatar}
+              onAnimateImage={handleAnimateImage}
               onShareToFeed={(postData) => {
                 const newPost: FeedPost = {
                   id: `post_img_${Date.now()}`,
@@ -1921,6 +2052,21 @@ export default function App() {
                 }
               }}
               theme={theme}
+            />
+          )}
+
+          {activeTab === 'aitools' && (
+            <AiToolsSection
+              username={username}
+              onNavigateTab={(tab) => setActiveTab(tab as any)}
+            />
+          )}
+
+          {activeTab === 'mycreations' && (
+            <MyCreationsSection
+              username={username}
+              onNavigateTab={(tab) => setActiveTab(tab as any)}
+              onAnimateImage={handleAnimateImage}
             />
           )}
 
@@ -2056,6 +2202,8 @@ export default function App() {
               myPrivateKey={keys.privateKey}
               onRefreshNodes={handleRefreshNodes}
               onGenerateNewKeys={handleGenerateNewKeys}
+              onAddNode={handleAddNode}
+              onRemoveNode={handleRemoveNode}
               isAppCreator={isAppCreator}
             />
           )}
@@ -2190,6 +2338,7 @@ export default function App() {
               username={username}
               avatar={avatar}
               isAppCreator={isAppCreator}
+              onNavigateToTab={(tab) => setActiveTab(tab as any)}
             />
           )}
 
@@ -2239,6 +2388,14 @@ export default function App() {
         onClose={() => setShowPwaModal(false)}
         deferredPrompt={deferredPrompt}
         onTriggerNativeInstall={handleTriggerNativeInstall}
+      />
+
+      {/* Weekly App Updates & Release Notes Modal */}
+      <WhatsNewModal
+        isOpen={showWhatsNewModal}
+        onClose={() => setShowWhatsNewModal(false)}
+        updates={appUpdates}
+        currentVersion={currentRunningVersion}
       />
 
       {/* 2-Hour Offline Usage Enforcement Modal */}

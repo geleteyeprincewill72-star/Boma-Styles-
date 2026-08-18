@@ -75,6 +75,7 @@ interface VideoTheaterSectionProps {
   username?: string;
   avatar?: string;
   isAppCreator?: boolean;
+  onNavigateToTab?: (tab: string) => void;
 }
 
 const VIDEO_PRESETS = [
@@ -97,7 +98,8 @@ export default function VideoTheaterSection({
   theme = 'dark',
   username = 'AnonPeer_402',
   avatar = 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=60',
-  isAppCreator = false
+  isAppCreator = false,
+  onNavigateToTab
 }: VideoTheaterSectionProps) {
   const isLight = theme === 'light';
 
@@ -621,6 +623,21 @@ export default function VideoTheaterSection({
         </div>
         
         <div className="flex flex-wrap items-center gap-2">
+          {/* AI Video Gen Quick Access Button */}
+          {onNavigateToTab && (
+            <button
+              onClick={() => onNavigateToTab('videogen')}
+              className="px-3 py-1.5 rounded-xl text-xs font-mono font-bold uppercase transition flex items-center gap-1.5 border shadow bg-gradient-to-r from-amber-500/20 to-purple-600/20 hover:from-amber-500/30 hover:to-purple-600/30 border-amber-500/40 text-amber-300 hover:scale-105 active:scale-95"
+              title="Generate cinematic 4K videos from text using Veo"
+            >
+              <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
+              <span>AI Video Gen</span>
+              <span className="text-[9px] bg-amber-950 border border-amber-700 px-1 rounded font-bold text-amber-300">
+                Veo
+              </span>
+            </button>
+          )}
+
           {/* Creator Exclusive Analytics Button */}
           <button
             onClick={() => setShowCreatorAnalytics(!showCreatorAnalytics)}

@@ -49,7 +49,7 @@ export interface FeedPost {
   // AI Post Enhancements & Superior Attributes
   isAiPost?: boolean;
   aiModel?: string;
-  aiQualityTier?: '4K HDR Neural' | 'Ultra HD 1080p' | 'Gemini 2.5 Flash Supercharged';
+  aiQualityTier?: '4K HDR Neural' | 'Ultra HD 1080p' | 'Gemini 2.5 Flash Supercharged' | 'HD Cinematic' | string;
   aiCapabilities?: string[];
   aiSummary?: string;
   aiOriginalityScore?: number;
@@ -159,6 +159,9 @@ export interface NetworkNode {
   ping: number;
   syncedBlocks: number;
   isSelf?: boolean;
+  publicKey?: string;
+  addedAt?: number;
+  isCustom?: boolean;
 }
 
 export interface Review {
@@ -175,6 +178,123 @@ export interface Review {
   signature: string;
   helpfulCount: number;
   hasMarkedHelpful?: boolean;
+}
+
+// ==================== WEEKLY APP UPDATE SYSTEM TYPES ====================
+
+export type UpdateStatus = 'draft' | 'published' | 'archived';
+
+export interface AppUpdate {
+  id: string;
+  version: string;
+  releaseDate: string;
+  title: string;
+  status: UpdateStatus;
+  newFeatures: string[];
+  bugFixes: string[];
+  performanceImprovements: string[];
+  securityImprovements: string[];
+  importantAnnouncements: string[];
+  summary?: string;
+  isCurrentDeployed?: boolean;
+  createdAt: number;
+  publishedAt?: number;
+  updatedAt?: number;
+  authorAdminId?: string;
+  authorAdminName?: string;
+}
+
+// ==================== REVIEWS & FEEDBACK SYSTEM TYPES ====================
+
+export type ReviewCategory = 
+  | 'General Review'
+  | 'Feature Request'
+  | 'Bug Report'
+  | 'AI Quality'
+  | 'Image Generation'
+  | 'Video Generation'
+  | 'Performance'
+  | 'User Interface'
+  | 'Other';
+
+export type ReviewStatus = 'pending' | 'approved' | 'hidden' | 'spam';
+
+export type ReviewReportReason = 'Spam' | 'Offensive' | 'Misleading' | 'Irrelevant' | 'Inappropriate';
+
+export interface AppFeedbackReview {
+  reviewId: string;
+  ownerId: string;
+  authorName: string;
+  authorAvatar?: string;
+  rating: number;
+  comment: string;
+  category: ReviewCategory;
+  suggestion?: string;
+  isAnonymous: boolean;
+  status: ReviewStatus;
+  createdAt: number;
+  updatedAt: number;
+  adminResponse?: string;
+  adminRespondedAt?: number;
+  reportedCount?: number;
+  reportReasons?: string[];
+  helpfulCount?: number;
+  hasMarkedHelpful?: boolean;
+}
+
+export interface ReviewAnalytics {
+  totalCount: number;
+  approvedCount: number;
+  pendingCount: number;
+  hiddenCount: number;
+  spamCount: number;
+  averageRating: number;
+  ratingCounts: {
+    5: number;
+    4: number;
+    3: number;
+    2: number;
+    1: number;
+    [key: number]: number;
+  };
+  categoryCounts: Record<string, number>;
+  recentSuggestions: Array<{
+    author: string;
+    category: string;
+    suggestion: string;
+    rating: number;
+    createdAt: number;
+  }>;
+  recentBugReports: Array<{
+    author: string;
+    comment: string;
+    rating: number;
+    createdAt: number;
+    status: string;
+  }>;
+}
+
+export interface ReviewReportDoc {
+  id: string;
+  reviewId: string;
+  reporterUserId: string;
+  reason: ReviewReportReason;
+  details?: string;
+  timestamp: number;
+  status: 'pending' | 'resolved' | 'dismissed';
+}
+
+export interface WeeklyMaintenanceReport {
+  timestamp: number;
+  overallStatus: 'passed' | 'warning' | 'error';
+  checks: {
+    name: string;
+    category: string;
+    status: 'pass' | 'warn' | 'fail';
+    details: string;
+  }[];
+  generatedSummary: string;
+  readyForRelease: boolean;
 }
 
 export interface SharedState {

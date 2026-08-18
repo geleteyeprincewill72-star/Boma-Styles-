@@ -79,7 +79,9 @@ import {
   SubscriptionPlan,
   SubscriberRecord
 } from '../utils/monetization';
-import { DollarSign, Database, Ban, ShieldAlert, Cpu as CpuIcon, Layers, Eye } from 'lucide-react';
+import { DollarSign, Database, Ban, ShieldAlert, Cpu as CpuIcon, Layers, Eye, Sparkles, MessageSquareCode } from 'lucide-react';
+import AdminUpdatesSection from './AdminUpdatesSection';
+import AdminReviewsSection from './AdminReviewsSection';
 
 interface AdminDashboardSectionProps {
   adminUserId: string;
@@ -96,7 +98,7 @@ export default function AdminDashboardSection({
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
 
   // Sub-sections
-  const [activeTab, setActiveTab] = useState<'metrics' | 'users' | 'reports' | 'broadcast' | 'audit' | 'billing' | 'creator_zip' | 'security' | 'monetization' | 'locations'>('metrics');
+  const [activeTab, setActiveTab] = useState<'metrics' | 'users' | 'reports' | 'broadcast' | 'audit' | 'billing' | 'creator_zip' | 'security' | 'monetization' | 'locations' | 'updates' | 'reviews_mod'>('metrics');
   const [locationSearchText, setLocationSearchText] = useState('');
   const [inspectLocationUser, setInspectLocationUser] = useState<UserProfile | null>(null);
 
@@ -675,6 +677,20 @@ export default function AdminDashboardSection({
           className={`px-3 py-1.5 rounded-lg border transition uppercase flex items-center gap-1.5 ${activeTab === 'billing' ? 'bg-red-950/40 border-red-800/40 text-red-400 font-bold' : 'bg-slate-950/40 border-slate-900 text-slate-400 hover:text-slate-200'}`}
         >
           <CreditCard className="w-3.5 h-3.5" /> Billing Config
+        </button>
+        <button
+          onClick={() => { setActiveTab('updates'); setStatusMessage(null); }}
+          className={`px-3 py-1.5 rounded-lg border transition uppercase flex items-center gap-1.5 ${activeTab === 'updates' ? 'bg-violet-950/80 border-violet-500/80 text-violet-300 font-bold shadow-md shadow-violet-950/50' : 'bg-slate-950/40 border-slate-900 text-violet-400 hover:text-violet-200'}`}
+          id="admin-updates-tab"
+        >
+          <Sparkles className="w-3.5 h-3.5 text-violet-400" /> 🚀 Weekly App Updates
+        </button>
+        <button
+          onClick={() => { setActiveTab('reviews_mod'); setStatusMessage(null); }}
+          className={`px-3 py-1.5 rounded-lg border transition uppercase flex items-center gap-1.5 ${activeTab === 'reviews_mod' ? 'bg-violet-950/80 border-violet-500/80 text-violet-300 font-bold shadow-md shadow-violet-950/50' : 'bg-slate-950/40 border-slate-900 text-violet-400 hover:text-violet-200'}`}
+          id="admin-reviews-mod-tab"
+        >
+          <MessageSquareCode className="w-3.5 h-3.5 text-violet-400" /> 💬 Review Moderation
         </button>
         <button
           onClick={() => { setActiveTab('locations'); setStatusMessage(null); }}
@@ -2096,6 +2112,26 @@ export default function AdminDashboardSection({
               Direct Server Download
             </a>
           </div>
+        </div>
+      )}
+
+      {/* WEEKLY APP UPDATES VIEW */}
+      {activeTab === 'updates' && (
+        <div className="animate-fadeIn">
+          <AdminUpdatesSection 
+            adminUserId={adminUserId}
+            adminUserName={adminUserName}
+          />
+        </div>
+      )}
+
+      {/* REVIEW MODERATION & FEEDBACK ANALYTICS VIEW */}
+      {activeTab === 'reviews_mod' && (
+        <div className="animate-fadeIn">
+          <AdminReviewsSection 
+            adminUserId={adminUserId}
+            adminUserName={adminUserName}
+          />
         </div>
       )}
 

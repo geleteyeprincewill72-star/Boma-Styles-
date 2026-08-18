@@ -86,12 +86,13 @@ interface OmniMindSectionProps {
   username: string;
   avatar: string;
   onNavigateTab?: (tab: string) => void;
+  onAnimateImage?: (imageUrl: string, prompt?: string) => void;
 }
 
 const LOCAL_STORAGE_SESSIONS_KEY = 'omnimind_chat_sessions_v2';
 const LOCAL_STORAGE_ACTIVE_ID_KEY = 'omnimind_active_session_id_v2';
 
-export const OmniMindSection: React.FC<OmniMindSectionProps> = ({ username, avatar, onNavigateTab }) => {
+export const OmniMindSection: React.FC<OmniMindSectionProps> = ({ username, avatar, onNavigateTab, onAnimateImage }) => {
   const getDefaultWelcomeMessage = (): ChatMessage => ({
     id: 'welcome_msg_' + Date.now(),
     sender: 'assistant',
@@ -1016,7 +1017,7 @@ What would you like to build, learn, solve, or write today?`,
                           className="w-full max-h-96 object-cover rounded-xl group-hover:scale-105 transition duration-500"
                           referrerPolicy="no-referrer"
                         />
-                        <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2 p-2">
+                        <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2 p-2 backdrop-blur-sm">
                           <button
                             onClick={() => setZoomMediaUrl({ url: msg.mediaUrl!, title: msg.mediaTitle || 'Image', type: 'image' })}
                             className="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-xs font-mono font-medium shadow flex items-center gap-1"
@@ -1024,6 +1025,16 @@ What would you like to build, learn, solve, or write today?`,
                             <Sparkles className="w-3.5 h-3.5" />
                             <span>Expand 4K</span>
                           </button>
+
+                          {onAnimateImage && (
+                            <button
+                              onClick={() => onAnimateImage(msg.mediaUrl!, msg.mediaPrompt || msg.mediaTitle)}
+                              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-mono font-medium shadow flex items-center gap-1"
+                            >
+                              <VideoIcon className="w-3.5 h-3.5" />
+                              <span>Animate Video</span>
+                            </button>
+                          )}
                         </div>
                       </div>
                     )}

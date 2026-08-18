@@ -19,7 +19,8 @@ import {
   ChevronRight,
   Zap,
   Image as ImageIcon,
-  Mic
+  Mic,
+  Film
 } from 'lucide-react';
 import { FeedPost } from '../types';
 import { AdsterraAd } from './AdsterraAd';
@@ -150,6 +151,36 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </p>
             <div className="mt-4 flex items-center text-xs font-mono font-bold text-purple-400 group-hover:translate-x-1 transition">
               <span>Launch Assistant</span>
+              <ArrowRight className="w-3.5 h-3.5 ml-1" />
+            </div>
+          </div>
+
+          {/* Card: AI Video Generator */}
+          <div
+            onClick={() => onNavigateTab('videogen')}
+            className={`group cursor-pointer rounded-2xl p-5 border transition-all duration-200 hover:-translate-y-1 shadow-lg relative overflow-hidden ${
+              isLight
+                ? 'bg-white border-slate-200 hover:border-amber-300'
+                : 'bg-[#0F1526] border-amber-500/20 hover:border-amber-500/50 shadow-amber-950/20'
+            }`}
+          >
+            <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-bl-full group-hover:bg-amber-500/10 transition" />
+            <div className="flex items-start justify-between mb-3">
+              <div className="p-3 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 group-hover:scale-110 transition">
+                <Film className="w-6 h-6" />
+              </div>
+              <span className="text-[10px] font-mono text-amber-300 font-bold bg-amber-950/80 border border-amber-800 px-2 py-0.5 rounded-full">
+                Veo AI
+              </span>
+            </div>
+            <h4 className="text-sm font-bold text-slate-100 font-sans group-hover:text-amber-300 transition">
+              AI VIDEO GENERATOR
+            </h4>
+            <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+              Generate 4K cinematic videos from text prompts and starting frames with fluid camera motion.
+            </p>
+            <div className="mt-4 flex items-center text-xs font-mono font-bold text-amber-400 group-hover:translate-x-1 transition">
+              <span>Generate Video</span>
               <ArrowRight className="w-3.5 h-3.5 ml-1" />
             </div>
           </div>

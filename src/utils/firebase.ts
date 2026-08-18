@@ -30,7 +30,18 @@ import {
   onAuthStateChanged
 } from 'firebase/auth';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { FeedPost, Character, ScreenplayBlock, Review } from '../types';
+import { 
+  FeedPost, 
+  Character, 
+  ScreenplayBlock, 
+  Review,
+  AppUpdate,
+  AppFeedbackReview,
+  ReviewCategory,
+  ReviewStatus,
+  ReviewReportReason,
+  ReviewReportDoc
+} from '../types';
 
 const firebaseConfig = {
   projectId: "aura-8fda0",
@@ -1099,6 +1110,329 @@ export async function updateWithdrawalStatus(
     console.warn("Could not update withdrawal status in Firestore:", err);
   }
 }
+
+// ==================== 13. WEEKLY APP UPDATES MANAGEMENT ====================
+
+const CURRENT_DEPLOYED_VERSION = "2.4.0";
+
+export function getCurrentDeployedVersion(): string {
+  return CURRENT_DEPLOYED_VERSION;
+}
+
+export async function fetchAppUpdates(onlyPublished: boolean = true): Promise<AppUpdate[]> {
+  const path = 'app_updates';
+  try {
+    let q;
+    if (onlyPublished) {
+      q = query(collection(db, path), where('status', '==', 'published'));
+    } else {
+      q = query(collection(db, path));
+    }
+    const snapshot = await getDocs(q);
+    const list: AppUpdate[] = [];
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data() as AppUpdate;
+      list.push({
+        ...data,
+        isCurrentDeployed: data.version === CURRENT_DEPLOYED_VERSION
+      });
+    });
+    // Sort in client by publishedAt / createdAt desc
+    list.sort((a, b) => (b.publishedAt || b.createdAt || 0) - (a.publishedAt || a.createdAt || 0));
+    return list;
+  } catch (err) {
+    console.warn("Could not fetch app updates from Firestore, using server route fallback:", err);
+    try {
+      const res = await fetch('/api/updates');
+      if (res.ok) {
+        const json = await res.json();
+        return (json.updates || []).map((u: any) => ({
+          ...u,
+          isCurrentDeployed: u.version === CURRENT_DEPLOYED_VERSION
+        }));
+      }
+    } catch (_) {}
+    return [];
+  }
+}
+
+export async function saveAppUpdate(update: AppUpdate): Promise<void> {
+  const path = `app_updates/${update.id}`;
+  try {
+    const payload = {
+      ...update,
+      updatedAt: Date.now()
+    };
+    await setDoc(doc(db, 'app_updates', update.id), payload, { merge: true });
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, path);
+  }
+}
+
+export async function publishAppUpdate(updateId: string, version: string): Promise<void> {
+  const path = `app_updates/${updateId}`;
+  try {
+    await updateDoc(doc(db, 'app_updates', updateId), {
+      status: 'published',
+      publishedAt: Date.now(),
+      updatedAt: Date.now()
+    });
+  } catch (err) {
+    handleFirestoreError(err, OperationType.UPDATE, path);
+  }
+}
+
+export async function deleteAppUpdate(updateId: string): Promise<void> {
+  const path = `app_updates/${updateId}`;
+  try {
+    await deleteDoc(doc(db, 'app_updates', updateId));
+  } catch (err) {
+    handleFirestoreError(err, OperationType.DELETE, path);
+  }
+}
+
+export function listenToPublishedUpdates(callback: (updates: AppUpdate[]) => void) {
+  const path = 'app_updates';
+  const q = query(collection(db, path), where('status', '==', 'published'));
+  return onSnapshot(q, (snapshot) => {
+    const list: AppUpdate[] = [];
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data() as AppUpdate;
+      list.push({
+        ...data,
+        isCurrentDeployed: data.version === CURRENT_DEPLOYED_VERSION
+      });
+    });
+    list.sort((a, b) => (b.publishedAt || b.createdAt || 0) - (a.publishedAt || a.createdAt || 0));
+    callback(list);
+  }, (err) => {
+    console.warn("Updates listener fallback:", err);
+  });
+}
+
+// ==================== 14. REVIEWS & FEEDBACK SYSTEM ====================
+
+export async function submitFeedbackReview(
+  reviewData: Omit<AppFeedbackReview, 'reviewId' | 'createdAt' | 'updatedAt' | 'status'>
+): Promise<AppFeedbackReview> {
+  const reviewId = `rev_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+  const path = `feedback_reviews/${reviewId}`;
+  
+  const newReview: AppFeedbackReview = {
+    ...reviewData,
+    reviewId,
+    status: 'pending', // Starts as pending moderation
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    reportedCount: 0,
+    reportReasons: [],
+    helpfulCount: 0
+  };
+
+  try {
+    await setDoc(doc(db, 'feedback_reviews', reviewId), newReview);
+    return newReview;
+  } catch (err) {
+    handleFirestoreError(err, OperationType.CREATE, path);
+    return newReview;
+  }
+}
+
+export async function fetchPublicFeedbackReviews(): Promise<AppFeedbackReview[]> {
+  const path = 'feedback_reviews';
+  try {
+    const q = query(
+      collection(db, path), 
+      where('status', '==', 'approved')
+    );
+    const snap = await getDocs(q);
+    const list: AppFeedbackReview[] = [];
+    snap.forEach(d => {
+      list.push(d.data() as AppFeedbackReview);
+    });
+    list.sort((a, b) => b.createdAt - a.createdAt);
+    return list;
+  } catch (err) {
+    console.warn("Could not fetch public reviews from Firestore, using server route fallback:", err);
+    try {
+      const res = await fetch('/api/reviews/public');
+      if (res.ok) {
+        const json = await res.json();
+        return json.reviews || [];
+      }
+    } catch (_) {}
+    return [];
+  }
+}
+
+export async function fetchUserFeedbackReviews(userId: string): Promise<AppFeedbackReview[]> {
+  const path = 'feedback_reviews';
+  try {
+    const q = query(
+      collection(db, path), 
+      where('ownerId', '==', userId)
+    );
+    const snap = await getDocs(q);
+    const list: AppFeedbackReview[] = [];
+    snap.forEach(d => {
+      list.push(d.data() as AppFeedbackReview);
+    });
+    list.sort((a, b) => b.createdAt - a.createdAt);
+    return list;
+  } catch (err) {
+    console.warn("Could not fetch user reviews:", err);
+    return [];
+  }
+}
+
+export async function fetchAllFeedbackReviewsForAdmin(): Promise<AppFeedbackReview[]> {
+  const path = 'feedback_reviews';
+  try {
+    const q = query(collection(db, path));
+    const snap = await getDocs(q);
+    const list: AppFeedbackReview[] = [];
+    snap.forEach(d => {
+      list.push(d.data() as AppFeedbackReview);
+    });
+    list.sort((a, b) => b.createdAt - a.createdAt);
+    return list;
+  } catch (err) {
+    console.warn("Admin fetch reviews error, using API fallback:", err);
+    try {
+      const res = await fetch('/api/admin/reviews');
+      if (res.ok) {
+        const json = await res.json();
+        return json.reviews || [];
+      }
+    } catch (_) {}
+    return [];
+  }
+}
+
+export const fetchAllFeedbackReviewsAdmin = fetchAllFeedbackReviewsForAdmin;
+
+export async function moderateFeedbackReview(reviewId: string, status: ReviewStatus): Promise<void> {
+  return updateFeedbackReviewStatus(reviewId, status);
+}
+
+export async function respondToFeedbackReview(reviewId: string, adminResponse: string): Promise<void> {
+  return updateFeedbackReviewStatus(reviewId, 'approved', adminResponse);
+}
+
+export async function updateFeedbackReviewStatus(
+  reviewId: string, 
+  status: ReviewStatus, 
+  adminResponse?: string
+): Promise<void> {
+  const path = `feedback_reviews/${reviewId}`;
+  try {
+    const payload: any = {
+      status,
+      updatedAt: Date.now()
+    };
+    if (adminResponse !== undefined) {
+      payload.adminResponse = adminResponse;
+      payload.adminRespondedAt = Date.now();
+    }
+    await updateDoc(doc(db, 'feedback_reviews', reviewId), payload);
+  } catch (err) {
+    handleFirestoreError(err, OperationType.UPDATE, path);
+  }
+}
+
+export async function updateUserFeedbackReview(
+  reviewId: string,
+  updates: {
+    rating?: number;
+    comment?: string;
+    category?: ReviewCategory;
+    suggestion?: string;
+    isAnonymous?: boolean;
+  }
+): Promise<void> {
+  const path = `feedback_reviews/${reviewId}`;
+  try {
+    await updateDoc(doc(db, 'feedback_reviews', reviewId), {
+      ...updates,
+      updatedAt: Date.now()
+    });
+  } catch (err) {
+    handleFirestoreError(err, OperationType.UPDATE, path);
+  }
+}
+
+export async function deleteFeedbackReview(reviewId: string): Promise<void> {
+  const path = `feedback_reviews/${reviewId}`;
+  try {
+    await deleteDoc(doc(db, 'feedback_reviews', reviewId));
+  } catch (err) {
+    handleFirestoreError(err, OperationType.DELETE, path);
+  }
+}
+
+export async function reportFeedbackReview(
+  reviewId: string,
+  reporterUserId: string,
+  reason: ReviewReportReason,
+  details?: string
+): Promise<void> {
+  const reportId = `rep_rev_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+  const reportPath = `review_reports/${reportId}`;
+  
+  const reportDoc: ReviewReportDoc = {
+    id: reportId,
+    reviewId,
+    reporterUserId,
+    reason,
+    details: details || '',
+    timestamp: Date.now(),
+    status: 'pending'
+  };
+
+  try {
+    await setDoc(doc(db, 'review_reports', reportId), reportDoc);
+    
+    // Also increment reportedCount on the review document
+    const reviewRef = doc(db, 'feedback_reviews', reviewId);
+    await updateDoc(reviewRef, {
+      reportedCount: increment(1)
+    });
+  } catch (err) {
+    handleFirestoreError(err, OperationType.CREATE, reportPath);
+  }
+}
+
+export async function fetchReviewReports(): Promise<ReviewReportDoc[]> {
+  const path = 'review_reports';
+  try {
+    const q = query(collection(db, path), orderBy('timestamp', 'desc'));
+    const snap = await getDocs(q);
+    const list: ReviewReportDoc[] = [];
+    snap.forEach(d => {
+      list.push(d.data() as ReviewReportDoc);
+    });
+    return list;
+  } catch (err) {
+    console.warn("Could not fetch review reports:", err);
+    return [];
+  }
+}
+
+export async function resolveReviewReport(
+  reportId: string, 
+  status: 'resolved' | 'dismissed'
+): Promise<void> {
+  const path = `review_reports/${reportId}`;
+  try {
+    await updateDoc(doc(db, 'review_reports', reportId), {
+      status,
+      resolvedAt: Date.now()
+    });
+  } catch (err) {
+    handleFirestoreError(err, OperationType.UPDATE, path);
+  }
+}
+
 
 
 
