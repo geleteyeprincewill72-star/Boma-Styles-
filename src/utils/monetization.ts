@@ -304,9 +304,9 @@ export const DEFAULT_ACTION_COSTS: Record<string, ActionDataCostConfig> = {
     revenueUnitRateUsd: 0.010,
     enabled: true
   },
-  ai_omnimind: {
-    actionKey: 'ai_omnimind',
-    label: 'OmniMind AI Neural Query',
+  creator_stream: {
+    actionKey: 'creator_stream',
+    label: 'Creator Live Stream Broadcast',
     baseCostMb: 1.00,
     configuredCostMb: 4.00,
     surchargeMultiplier: 4.0,
@@ -440,8 +440,8 @@ export function getUsageLedger(): UsageLedgerRecord[] {
       timestamp: now - 1800000,
       userId: 'usr_peer_001',
       username: 'Alex_Dev',
-      actionKey: 'ai_omnimind',
-      actionLabel: 'OmniMind AI Neural Query',
+      actionKey: 'creator_stream',
+      actionLabel: 'Creator Live Stream Broadcast',
       baseCostMb: 1.0,
       chargedCostMb: 4.0,
       surchargeMb: 3.0,

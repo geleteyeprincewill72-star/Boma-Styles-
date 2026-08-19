@@ -145,7 +145,7 @@ export const WelcomePrivacyModal: React.FC<WelcomePrivacyModalProps> = ({
                 </div>
                 <div className="p-2.5 bg-slate-900/80 border border-slate-800 rounded-lg flex items-center gap-2 text-slate-300">
                   <Sparkles className="w-4 h-4 text-violet-400 shrink-0" />
-                  <span>OmniMind AI Productivity Assistant</span>
+                  <span>Creators Discovery & Social Hub</span>
                 </div>
                 <div className="p-2.5 bg-slate-900/80 border border-slate-800 rounded-lg flex items-center gap-2 text-slate-300">
                   <ShieldCheck className="w-4 h-4 text-cyan-400 shrink-0" />

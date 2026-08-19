@@ -31,10 +31,10 @@ import {
 
 export type TabType = 
   | 'home' 
+  | 'creators'
   | 'messages' 
   | 'friends' 
   | 'calls' 
-  | 'omnimind' 
   | 'search'
   | 'imagegen'
   | 'videogen'
@@ -81,7 +81,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
 
   const NAV_ITEMS = [
     { id: 'home', label: 'HOME', icon: Home, badge: null, color: 'text-purple-400' },
-    { id: 'omnimind', label: 'AI ASSISTANT', icon: Bot, badge: 'AI', color: 'text-purple-400' },
+    { id: 'creators', label: 'CREATORS', icon: Users, badge: 'Hot', color: 'text-purple-400' },
     { id: 'search', label: 'AI WEB SEARCH', icon: Globe, badge: 'Live', color: 'text-cyan-400' },
     { id: 'imagegen', label: 'AI IMAGE GEN', icon: ImageIcon, badge: '4K', color: 'text-purple-300' },
     { id: 'videogen', label: 'AI VIDEO GEN', icon: Film, badge: 'Veo', color: 'text-amber-400' },
@@ -195,13 +195,13 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         </button>
 
         <button
-          onClick={() => setActiveTab('omnimind')}
+          onClick={() => setActiveTab('creators')}
           className={`flex flex-col items-center gap-0.5 text-[10px] font-mono transition ${
-            activeTab === 'omnimind' ? 'text-purple-400 font-bold' : 'text-slate-400'
+            activeTab === 'creators' ? 'text-purple-400 font-bold' : 'text-slate-400'
           }`}
         >
-          <Bot className="w-5 h-5" />
-          <span>AI</span>
+          <Users className="w-5 h-5" />
+          <span>Creators</span>
         </button>
 
         <button

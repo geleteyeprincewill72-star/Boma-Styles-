@@ -89,17 +89,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               Welcome to <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">Aura</span>, {username}!
             </h2>
             <p className="text-xs md:text-sm text-slate-300 max-w-xl leading-relaxed">
-              Your next-generation hub combining instant messaging, voice & video calls, AI assistants, and social feeds into one seamless ecosystem.
+              Your next-generation sovereign communication platform: discover creators, make encrypted voice & video calls, publish multimedia feeds, and create with high-end creative studios.
             </p>
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
             <button
-              onClick={() => onNavigateTab('omnimind')}
+              onClick={() => onNavigateTab('creators')}
               className="px-5 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs font-mono shadow-lg shadow-purple-900/40 transition transform hover:-translate-y-0.5 flex items-center gap-2"
             >
-              <Bot className="w-4 h-4 text-purple-200" />
-              <span>Ask Aura AI</span>
+              <Users className="w-4 h-4 text-purple-200" />
+              <span>Discover Creators</span>
             </button>
             <button
               onClick={() => onNavigateTab('feed')}
@@ -125,9 +125,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Card 1: AI Assistant */}
+          {/* Card 1: Creators Node */}
           <div
-            onClick={() => onNavigateTab('omnimind')}
+            onClick={() => onNavigateTab('creators')}
             className={`group cursor-pointer rounded-2xl p-5 border transition-all duration-200 hover:-translate-y-1 shadow-lg relative overflow-hidden ${
               isLight
                 ? 'bg-white border-slate-200 hover:border-purple-300'
@@ -137,20 +137,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-bl-full group-hover:bg-purple-500/10 transition" />
             <div className="flex items-start justify-between mb-3">
               <div className="p-3 rounded-2xl bg-purple-500/15 border border-purple-500/30 text-purple-400 group-hover:scale-110 transition">
-                <Bot className="w-6 h-6" />
+                <Users className="w-6 h-6" />
               </div>
               <span className="text-[10px] font-mono text-purple-300 font-bold bg-purple-950/80 border border-purple-800 px-2 py-0.5 rounded-full">
-                AI Powered
+                Featured
               </span>
             </div>
             <h4 className="text-sm font-bold text-slate-100 font-sans group-hover:text-purple-300 transition">
-              AI ASSISTANT
+              CREATORS NODE
             </h4>
             <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-              Chat with Aura AI, generate creative content, and summarize research.
+              Discover top creators, follow channels, explore multimedia portfolios, and start direct calls.
             </p>
             <div className="mt-4 flex items-center text-xs font-mono font-bold text-purple-400 group-hover:translate-x-1 transition">
-              <span>Launch Assistant</span>
+              <span>Explore Creators</span>
               <ArrowRight className="w-3.5 h-3.5 ml-1" />
             </div>
           </div>

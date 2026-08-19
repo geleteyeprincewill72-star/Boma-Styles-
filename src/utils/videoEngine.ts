@@ -223,7 +223,7 @@ export function deleteVideoPlaylist(playlistId: string): void {
 
 const KEYWORD_GROUPS: Record<string, string[]> = {
   cyberpunk: ['cyberpunk', 'neon', 'matrix', 'synthwave', 'solas', 'future', 'blade', 'dystopian', 'p2p'],
-  ai: ['ai', 'gemini', 'neural', 'robotics', 'intelligence', 'omnimind', 'synthesizer', 'algorithm'],
+  ai: ['ai', 'gemini', 'neural', 'robotics', 'intelligence', 'creators', 'synthesizer', 'algorithm'],
   gaming: ['game', 'fps', 'speedrun', 'stream', 'gameplay', 'multiplayer', 'esports', 'twitch'],
   music: ['audio', 'music', 'beats', 'track', 'soundtrack', 'synth', 'melody', 'bass', 'ambient'],
   crypto: ['blockchain', 'zk', 'crypto', 'ledger', 'sovereign', 'token', 'wallet', 'mining', 'web3'],

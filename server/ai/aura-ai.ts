@@ -192,7 +192,7 @@ export async function auraChat(params: AuraChatParams): Promise<AuraChatResult> 
   } = params;
 
   const defaultSystemInstruction = systemInstruction || 
-    `You are OmniMind, the ultra-intelligent, highly capable AI core powering Aura.
+    `You are the Aura Intelligence Core powering the creative studios and search in Aura.
 You provide clear, accurate, thoughtful, and insightful responses.
 When answering questions about current events, technical topics, code, or real-time data, provide clean markdown formatting with clear explanations and structured examples.`;
 
@@ -304,7 +304,7 @@ When answering questions about current events, technical topics, code, or real-t
 
   // Graceful offline fallback when key is not yet set
   return {
-    text: `OmniMind AI Core is operating in decentralized local mode.\n\nTo connect live Google Search grounding and full multimodal intelligence, please configure your **GEMINI_API_KEY** in your deployment environment settings.\n\nQuery received: "${prompt}"`,
+    text: `Aura Intelligence Engine is operating in decentralized local mode.\n\nTo connect live Google Search grounding and full multimodal intelligence, please configure your **GEMINI_API_KEY** in your deployment environment settings.\n\nQuery received: "${prompt}"`,
     sources: [],
     searchQueries: [],
     status: "local_offline",

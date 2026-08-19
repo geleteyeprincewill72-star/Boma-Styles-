@@ -27,7 +27,6 @@ interface SearchSectionProps {
   username: string;
   avatar?: string;
   onShareToFeed?: (post: Partial<FeedPost>) => void;
-  onOpenChatWithQuery?: (query: string) => void;
   onNavigateTab?: (tab: string) => void;
   theme?: 'dark' | 'light';
 }
@@ -64,7 +63,6 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
   username,
   avatar = '',
   onShareToFeed,
-  onOpenChatWithQuery,
   onNavigateTab,
   theme = 'dark'
 }) => {
@@ -363,19 +361,6 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
                       );
                     })}
                   </div>
-                </div>
-              )}
-
-              {/* Explore in OmniMind Chat Shortcut */}
-              {onOpenChatWithQuery && (
-                <div className="pt-2 flex justify-end">
-                  <button
-                    onClick={() => onOpenChatWithQuery(currentResult.query)}
-                    className="inline-flex items-center gap-2 text-xs font-medium text-purple-300 hover:text-purple-200 transition-colors"
-                  >
-                    <span>Continue this topic in AI Assistant Chat</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
                 </div>
               )}
             </div>

@@ -175,7 +175,7 @@ export default function AdminReviewsSection({
       });
 
       // 2. Firestore
-      await respondToFeedbackReview(reviewId, replyText.trim(), adminUserId);
+      await respondToFeedbackReview(reviewId, replyText.trim());
 
       setReviews(prev => prev.map(r => 
         r.reviewId === reviewId 
@@ -351,7 +351,7 @@ export default function AdminReviewsSection({
                 >
                   <span className="text-slate-200 font-sans">{cat}</span>
                   <span className="px-1.5 py-0.2 rounded bg-violet-950 text-violet-300 border border-violet-800 font-mono font-bold text-[10px]">
-                    {cnt}
+                    {String(cnt)}
                   </span>
                 </div>
               ))}

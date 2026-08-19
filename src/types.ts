@@ -348,3 +348,87 @@ export interface VideoRecommendation {
   tags: string[];
 }
 
+// ==================== CREATORS NODE & PROFILE TYPES ====================
+
+export type CreatorCategory = 
+  | 'AI Filmmaking' 
+  | 'Digital Art' 
+  | 'Music & Sound' 
+  | 'Tech & Web3' 
+  | 'Writing & Lore' 
+  | 'Cyberpunk Visuals' 
+  | 'Podcasts & Radio'
+  | 'General Content';
+
+export interface CreatorProfile {
+  id: string;
+  displayName: string;
+  username: string; // e.g. "davidjohnson" (rendered with @)
+  avatar: string;
+  bannerUrl?: string;
+  bio: string;
+  category: CreatorCategory;
+  isVerified?: boolean;
+  isOnline?: boolean;
+  followersCount: number;
+  followingCount: number;
+  postsCount: number;
+  videosCount: number;
+  totalViews?: number;
+  totalLikes?: number;
+  joinedDate: string;
+  location?: string;
+  tags: string[];
+  privacySettings?: {
+    whoCanMessage: 'everyone' | 'friends' | 'following' | 'nobody';
+    whoCanCall: 'everyone' | 'friends' | 'following' | 'nobody';
+    whoCanVideoCall: 'everyone' | 'friends' | 'following' | 'nobody';
+    showOnlineStatus: boolean;
+  };
+}
+
+// ==================== REAL COMMUNICATION & WEBRTC CALLING TYPES ====================
+
+export type CallState = 
+  | 'IDLE' 
+  | 'CALLING' 
+  | 'RINGING' 
+  | 'ACCEPTED' 
+  | 'CONNECTING' 
+  | 'CONNECTED' 
+  | 'DECLINED' 
+  | 'BUSY' 
+  | 'NO_ANSWER' 
+  | 'FAILED' 
+  | 'RECONNECTING' 
+  | 'ENDED';
+
+export interface CallSession {
+  sessionId: string;
+  callerUsername: string;
+  callerDisplayName: string;
+  callerAvatar: string;
+  recipientUsername: string;
+  recipientDisplayName: string;
+  recipientAvatar: string;
+  callType: 'voice' | 'video';
+  state: CallState;
+  startTime?: number;
+  connectedTime?: number;
+  endTime?: number;
+  durationSeconds?: number;
+  endReason?: string;
+}
+
+export interface CallHistoryItem {
+  id: string;
+  otherUsername: string;
+  otherDisplayName: string;
+  otherAvatar: string;
+  direction: 'incoming' | 'outgoing';
+  callType: 'voice' | 'video';
+  status: 'completed' | 'missed' | 'declined' | 'busy' | 'failed';
+  timestamp: number;
+  durationSeconds: number;
+}
+

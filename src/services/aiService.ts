@@ -1,13 +1,11 @@
 /**
  * AURA MODULAR BACKEND SERVICE ABSTRACTION LAYER
- * OmniMind Universal Intelligence & AI Assistant Service
+ * AI Intelligence & Studio Services
  * 
  * Capabilities:
- * - Provider-agnostic chat with step-by-step thought chain
- * - Private user AI memory storage in Firestore (`/ai_threads/{userId}/messages`)
- * - Incognito (No History) mode
+ * - Provider-agnostic AI processing
+ * - Multimodal synthesis and search grounding
  * - Prompt enhancement & audio transcription
- * - Delete conversation / Delete all history / Export history
  */
 
 import { 
@@ -65,7 +63,7 @@ export interface IAiService {
 class UniversalAiService implements IAiService {
   async sendMessage(req: AiChatRequest): Promise<AiChatMessage> {
     const user = authService.getCurrentUser();
-    const endpoint = '/api/omnimind-chat';
+    const endpoint = '/api/ai/chat';
 
     const payload = {
       prompt: req.prompt,

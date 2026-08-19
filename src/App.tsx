@@ -43,7 +43,7 @@ import {
   FolderArchive,
   Check
 } from 'lucide-react';
-import { KeyPair, FeedPost, Comment, Character, ScreenplayBlock, NetworkNode, Review, AppUpdate } from './types';
+import { KeyPair, FeedPost, Comment, Character, ScreenplayBlock, NetworkNode, Review, AppUpdate, CallSession } from './types';
 import { generateSigningKeyPair } from './utils/crypto';
 import WelcomePrivacyModal from './components/WelcomePrivacyModal';
 import WelcomeConsentModal from './components/WelcomeConsentModal';
@@ -67,7 +67,8 @@ import MonetizationSection from './components/MonetizationSection';
 import { AdsterraGlobalScripts } from './components/AdsterraAd';
 import VideoHubSection from './components/VideoHubSection';
 import VideoTheaterSection from './components/VideoTheaterSection';
-import { OmniMindSection } from './components/OmniMindSection';
+import CreatorsSection from './components/CreatorsSection';
+import CallModal from './components/CallModal';
 import HighQualityImageStudio from './components/HighQualityImageStudio';
 import TextToVideoStudio from './components/TextToVideoStudio';
 import AudioTranscriberStudio from './components/AudioTranscriberStudio';
@@ -81,7 +82,6 @@ import ProfileSection from './components/ProfileSection';
 import NavigationSidebar from './components/NavigationSidebar';
 import { Language, TRANSLATIONS } from './utils/translations';
 import { logOnDeviceInteraction } from './utils/discoveryEngine';
-import { exportRepositoryAsZip } from './utils/zipExporter';
 import {
   auth,
   fetchUserProfile,
@@ -239,13 +239,34 @@ const INITIAL_NODES: NetworkNode[] = [
 ];
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'home' | 'messages' | 'friends' | 'calls' | 'omnimind' | 'search' | 'videogen' | 'imagegen' | 'aitools' | 'mycreations' | 'audio' | 'feed' | 'videos' | 'notifications' | 'profile' | 'settings' | 'wallet' | 'monetization' | 'reviews' | 'studio' | 'network' | 'admin' | 'discovery'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'messages' | 'friends' | 'calls' | 'creators' | 'search' | 'videogen' | 'imagegen' | 'aitools' | 'mycreations' | 'audio' | 'feed' | 'videos' | 'notifications' | 'profile' | 'settings' | 'wallet' | 'monetization' | 'reviews' | 'studio' | 'network' | 'admin' | 'discovery'>('home');
   const [username, setUsername] = useState('AnonPeer_402');
   const [avatar, setAvatar] = useState('https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=60');
   const [userStatus, setUserStatus] = useState<string>(() => {
     const cached = localStorage.getItem('aura_user_status');
     return cached || 'Open to Networking';
   });
+
+  // Active Real-Time WebRTC Call Session State
+  const [activeCallSession, setActiveCallSession] = useState<CallSession | null>(null);
+  const [isCallModalOpen, setIsCallModalOpen] = useState(false);
+
+  const handleStartCallWithUser = (targetUsername: string, targetDisplayName: string, targetAvatar: string, callType: 'voice' | 'video' = 'voice') => {
+    const newSession = {
+      sessionId: `call_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      callerUsername: username,
+      callerDisplayName: username,
+      callerAvatar: avatar,
+      recipientUsername: targetUsername,
+      recipientDisplayName: targetDisplayName || targetUsername,
+      recipientAvatar: targetAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      callType,
+      state: 'CALLING' as const,
+      startTime: Date.now()
+    };
+    setActiveCallSession(newSession);
+    setIsCallModalOpen(true);
+  };
 
   // Post Preference State
   const [postPreference, setPostPreference] = useState<any>(null);
@@ -499,7 +520,7 @@ export default function App() {
       { tag: '#P2PStreaming', count: 96, totalScore: 680, icon: '🎥', category: 'Cinema' },
       { tag: '#ZeroKnowledge', count: 85, totalScore: 590, icon: '🛡️', category: 'Privacy' },
       { tag: '#VoiceNotes', count: 72, totalScore: 510, icon: '🎙️', category: 'Audio' },
-      { tag: '#OmniMind', count: 63, totalScore: 470, icon: '✨', category: 'Intelligence' }
+      { tag: '#CreatorsMesh', count: 63, totalScore: 470, icon: '✨', category: 'Creators' }
     ];
 
     seedTrending.forEach((item) => {
@@ -551,32 +572,6 @@ export default function App() {
       .sort((a, b) => b.totalScore - a.totalScore)
       .slice(0, 8);
   }, [posts]);
-
-  // Source Code ZIP export state
-  const [downloadingZip, setDownloadingZip] = useState(false);
-  const [zipProgress, setZipProgress] = useState(0);
-  const [zipSuccessMessage, setZipSuccessMessage] = useState(false);
-
-  const handleDownloadSourceZip = async () => {
-    if (downloadingZip) return;
-    try {
-      setDownloadingZip(true);
-      setZipProgress(15);
-      await exportRepositoryAsZip(undefined, (progress) => {
-        setZipProgress(progress);
-      });
-      setZipSuccessMessage(true);
-      setTimeout(() => setZipSuccessMessage(false), 3500);
-    } catch (err: any) {
-      console.warn("Client ZIP export error, using direct server route:", err);
-      window.location.href = '/api/download-source-zip';
-    } finally {
-      setTimeout(() => {
-        setDownloadingZip(false);
-        setZipProgress(0);
-      }, 1000);
-    }
-  };
 
   const [showTermuxHelper, setShowTermuxHelper] = useState(false);
 
@@ -1483,42 +1478,6 @@ export default function App() {
           )}
         </div>
 
-        {/* Download Source Code ZIP Button (Prominent in Header on Entry) */}
-        <button
-          id="btn-download-source-zip"
-          type="button"
-          onClick={handleDownloadSourceZip}
-          disabled={downloadingZip}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-mono font-bold transition-all shadow-md active:scale-95 ${
-            zipSuccessMessage
-              ? 'bg-emerald-600 border-emerald-400 text-white shadow-emerald-950/50'
-              : downloadingZip
-              ? 'bg-cyan-950 border-cyan-500/50 text-cyan-300 animate-pulse'
-              : 'bg-gradient-to-r from-cyan-600 via-indigo-600 to-purple-600 hover:from-cyan-500 hover:via-indigo-500 hover:to-purple-500 text-white border-cyan-400/30 shadow-purple-950/40 hover:shadow-cyan-500/20'
-          }`}
-          title="Download complete source code ZIP archive of this web application immediately"
-        >
-          {zipSuccessMessage ? (
-            <>
-              <Check className="w-4 h-4 text-white animate-bounce shrink-0" />
-              <span className="hidden sm:inline">Source Code Downloaded!</span>
-              <span className="sm:hidden">Ready!</span>
-            </>
-          ) : downloadingZip ? (
-            <>
-              <div className="w-3.5 h-3.5 border-2 border-cyan-300 border-t-transparent rounded-full animate-spin shrink-0" />
-              <span className="hidden sm:inline">Zipping {zipProgress}%...</span>
-              <span className="sm:hidden">{zipProgress}%</span>
-            </>
-          ) : (
-            <>
-              <Download className="w-4 h-4 text-cyan-200 shrink-0" />
-              <span className="hidden sm:inline">Download Source ZIP</span>
-              <span className="sm:hidden">Source ZIP</span>
-            </>
-          )}
-        </button>
-
         {/* Current Active Cryptographic Identity Display */}
         <div className={`hidden md:flex items-center gap-3 px-3.5 py-1.5 rounded-lg border shadow-inner ${
           isLight ? 'bg-slate-100/60 border-slate-200' : 'bg-slate-950/60 border-slate-900'
@@ -1679,6 +1638,7 @@ export default function App() {
             <CallsSection
               currentUserName={username}
               currentUserAvatar={avatar}
+              onInitiateCall={handleStartCallWithUser}
               theme={theme}
             />
           )}
@@ -1965,12 +1925,16 @@ export default function App() {
             </div>
           )}
 
-          {activeTab === 'omnimind' && (
-            <OmniMindSection
-              username={username}
-              avatar={avatar}
-              onNavigateTab={(tab) => setActiveTab(tab as any)}
-              onAnimateImage={handleAnimateImage}
+          {activeTab === 'creators' && (
+            <CreatorsSection
+              currentUsername={username}
+              currentUserAvatar={avatar}
+              posts={posts}
+              onStartCall={(creator, type) => handleStartCallWithUser(creator.username, creator.displayName, creator.avatar, type)}
+              onSendMessage={(_creatorUsername) => {
+                setActiveTab('messages');
+              }}
+              theme={theme}
             />
           )}
 
@@ -2171,15 +2135,15 @@ export default function App() {
             )
           )}
 
-          {activeTab === 'reviews' && keys && (
+          {activeTab === 'reviews' && (
             <ReviewsSection
               username={username}
-              myPublicKey={keys.publicKey}
-              myPrivateKey={keys.privateKey}
-              reviews={filteredReviews}
-              onAddReview={handleAddReview}
-              onHelpfulToggle={handleHelpfulToggle}
+              myPublicKey={keys?.publicKey}
+              myPrivateKey={keys?.privateKey}
+              currentUserId={currentUser?.uid || userProfile?.username || username}
+              userAvatar={userProfile?.avatar || currentUser?.photoURL}
               isAppCreator={isAppCreator}
+              onOpenAdminReviews={() => setActiveTab('admin')}
             />
           )}
 
@@ -2400,6 +2364,19 @@ export default function App() {
 
       {/* 2-Hour Offline Usage Enforcement Modal */}
       <OfflineTrialLockModal isOffline={isOffline} />
+
+      {/* Real-Time WebRTC P2P Voice & Video Call Modal */}
+      <CallModal
+        session={activeCallSession}
+        isOpen={isCallModalOpen}
+        onClose={() => {
+          setIsCallModalOpen(false);
+          setActiveCallSession(null);
+        }}
+        onSendMessage={(_recipientUsername) => {
+          setActiveTab('messages');
+        }}
+      />
 
       {/* Footer Branding */}
       <footer className="border-t border-slate-900/60 bg-[#05080E] py-4 text-center text-xs font-mono text-slate-600 mt-auto flex flex-col sm:flex-row items-center justify-between px-6 gap-2">

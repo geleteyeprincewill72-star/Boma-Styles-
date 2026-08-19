@@ -49,7 +49,7 @@ class SubscriptionService {
         features: [
           'High Resolution Video Generation',
           'Priority GPU Queue',
-          'Enhanced OmniMind Reasoning',
+          'Creator Node Live Streaming & Studio Tools',
           'Verified Member Profile'
         ]
       };

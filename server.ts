@@ -1256,71 +1256,8 @@ app.get("/api/paystack/transactions", (req, res) => {
   });
 });
 
-// Route to download the entire prepared project ZIP file (Strictly restricted to Creator)
-app.get(["/api/download-project-zip", "/api/download-source-zip"], async (req, res) => {
-  if (!verifyAdminRequest(req)) {
-    return res.status(403).json({ 
-      error: "Access Denied: Source code archive export is strictly restricted to the verified application creator (geleteyeprincewill72@gmail.com)." 
-    });
-  }
-
-  try {
-    const JSZip = (await import("jszip")).default;
-    const zip = new JSZip();
-
-    // Helper to recursively add files to ZIP
-    const addDirectoryToZip = (dirPath: string, zipFolder: any) => {
-      const entries = fs.readdirSync(dirPath, { withFileTypes: true });
-      for (const entry of entries) {
-        const fullPath = path.join(dirPath, entry.name);
-        if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === '.git' || entry.name === '.vite') {
-          continue;
-        }
-        if (entry.isDirectory()) {
-          const subFolder = zipFolder.folder(entry.name);
-          addDirectoryToZip(fullPath, subFolder);
-        } else if (entry.isFile()) {
-          try {
-            const fileContent = fs.readFileSync(fullPath);
-            zipFolder.file(entry.name, fileContent);
-          } catch (readErr) {
-            console.warn(`Could not read ${fullPath}:`, readErr);
-          }
-        }
-      }
-    };
-
-    addDirectoryToZip(process.cwd(), zip);
-
-    const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
-    res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', 'attachment; filename="aura-creator-source.zip"');
-    return res.send(zipBuffer);
-  } catch (error) {
-    console.error("ZIP Generation Error:", error);
-    return res.status(500).send("Error generating Creator Source ZIP file.");
-  }
-});
-
-// ==================== SOVEREIGN AI & MULTIMODAL INTELLIGENCE ENDPOINTS ====================
-
-// GET /api/ai-models-status & /api/ai/config - Centralized status and model config
-app.get(["/api/ai-models-status", "/api/ai/config"], (req, res) => {
-  const hasKey = Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== "MY_GEMINI_API_KEY");
-  res.json({
-    success: true,
-    apiKeyConfigured: hasKey,
-    models: {
-      text: { model: AI_CONFIG.textModel, fallback: AI_CONFIG.fallbackTextModel, status: "online", supportsSearch: true },
-      image: { model: AI_CONFIG.imageModel, fallback: AI_CONFIG.fallbackImageModel, status: "online", resolutions: ["512px", "1K", "2K", "4K"] },
-      video: { model: AI_CONFIG.videoLiteModel, pro: AI_CONFIG.videoModel, status: "online", resolutions: ["720p", "1080p", "4K"] },
-      audio: { model: AI_CONFIG.audioModel, status: "online" }
-    }
-  });
-});
-
-// POST /api/omnimind-chat & /api/ai/chat - Intelligent Multimodal Chat with Google Search Grounding
-app.post(["/api/omnimind-chat", "/api/ai/chat"], async (req, res) => {
+// POST /api/ai/chat - Intelligent Multimodal Chat with Google Search Grounding
+app.post("/api/ai/chat", async (req, res) => {
   try {
     const { prompt, mode, history, attachment, forceSearch, userId } = req.body || {};
     if ((!prompt || typeof prompt !== 'string') && !attachment) {
@@ -1380,7 +1317,7 @@ app.post(["/api/omnimind-chat", "/api/ai/chat"], async (req, res) => {
     });
 
   } catch (error: any) {
-    console.error("OmniMind chat error:", error);
+    console.error("AI chat error:", error);
     res.status(500).json({ success: false, error: error.message || "Failed to process chat query" });
   }
 });

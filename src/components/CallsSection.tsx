@@ -67,12 +67,14 @@ const SAMPLE_CALL_LOGS: CallRecord[] = [
 interface CallsSectionProps {
   currentUserName: string;
   currentUserAvatar: string;
+  onInitiateCall?: (targetUsername: string, targetDisplayName: string, targetAvatar: string, callType: 'voice' | 'video') => void;
   theme?: 'dark' | 'light';
 }
 
 export const CallsSection: React.FC<CallsSectionProps> = ({
   currentUserName,
   currentUserAvatar,
+  onInitiateCall,
   theme = 'dark',
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'dialer' | 'voice_ai' | 'voicemails'>('dialer');
@@ -92,6 +94,11 @@ export const CallsSection: React.FC<CallsSectionProps> = ({
   const isLight = theme === 'light';
 
   const startNewCall = (contactName: string, avatar: string, type: 'voice' | 'video') => {
+    if (onInitiateCall) {
+      onInitiateCall(contactName.replace(/\s+/g, '_').toLowerCase(), contactName, avatar, type);
+      return;
+    }
+
     setActiveCall({
       contactName,
       avatar,
