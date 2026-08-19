@@ -860,13 +860,13 @@ export default function FeedSection({
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-bold font-mono text-amber-300 uppercase tracking-wide">
-                  Your Custom Post Style:
+                  Feed & Media Preferences:
                 </span>
                 <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-950/90 border border-amber-500/40 text-amber-300 rounded-md font-mono">
                   {postPreference.category}
                 </span>
                 <span className="text-[10px] font-bold px-2 py-0.5 bg-indigo-950/90 border border-indigo-500/40 text-indigo-300 rounded-md font-mono">
-                  {postPreference.platformStyle || 'Twitter/X Style'}
+                  {postPreference.platformStyle || 'Standard Feed'}
                 </span>
                 <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-950/90 border border-emerald-500/40 text-emerald-300 rounded-md font-mono">
                   {postPreference.mediaQuality || '1080p HD'}
@@ -883,7 +883,7 @@ export default function FeedSection({
             className="px-3.5 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300 rounded-xl text-xs font-mono font-bold transition flex items-center gap-1.5 whitespace-nowrap self-end sm:self-auto hover:scale-[1.02]"
           >
             <Sliders className="w-3.5 h-3.5" />
-            <span>Update Style & Quality</span>
+            <span>Format & Quality Settings</span>
           </button>
         </div>
       ) : (
@@ -891,14 +891,14 @@ export default function FeedSection({
           <div className="flex items-center gap-2.5">
             <Sparkles className="w-4 h-4 text-amber-400" />
             <span className="text-xs font-mono text-slate-300">
-              Customize how you want your posts to look, choose 4K/1080p quality & Facebook/Twitter/YouTube/WhatsApp platform styles!
+              Customize your feed presentation layout, media resolution & publishing formats.
             </span>
           </div>
           <button
             onClick={onOpenPreferenceModal}
             className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 rounded-xl text-xs font-mono font-bold transition whitespace-nowrap shadow"
           >
-            Describe My Post Style
+            Feed & Format Settings
           </button>
         </div>
       )}

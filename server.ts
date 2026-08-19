@@ -690,6 +690,244 @@ app.post("/api/verify-earnings", (req, res) => {
   });
 });
 
+// ==================== PAID AD REMOVAL SYSTEM STORE & ENDPOINTS ====================
+
+interface ServerAdRemovalPayment {
+  id: string;
+  userId: string;
+  username: string;
+  userEmail?: string;
+  amount: number;
+  currency: string;
+  planType: 'monthly' | 'yearly' | 'lifetime';
+  planTitle: string;
+  paymentMethod: 'OPAY_TRANSFER' | 'PAYSTACK_DIRECT';
+  targetAccount: {
+    bank: string;
+    accountNumber: string;
+    accountName: string;
+  };
+  reference: string;
+  receiptUrl?: string;
+  receiptFileName?: string;
+  receiptFileType?: string;
+  receiptNote?: string;
+  senderName?: string;
+  senderPhone?: string;
+  status: 'pending' | 'verified' | 'rejected';
+  rejectionReason?: string;
+  submittedAt: number;
+  verifiedAt?: number;
+  verifiedBy?: string;
+  adsRemoved: boolean;
+  expiresAt?: number | null;
+}
+
+const serverAdRemovalPaymentsStore: ServerAdRemovalPayment[] = [];
+const verifiedAdFreeUsersMap = new Map<string, { adsRemoved: boolean; expiresAt: number | null; planType: string }>();
+
+// GET /api/ad-removal/config - Target payment details & active plans
+app.get("/api/ad-removal/config", (req, res) => {
+  res.json({
+    success: true,
+    targetAccount: {
+      accountNumber: "8105341700",
+      bankName: "OPAY",
+      accountName: "Aura Sovereign / Princewill Geleteye",
+      supportContact: "08154561612 (WhatsApp / Facebook: Bios Styles)"
+    },
+    plans: [
+      { id: "monthly", title: "30-Day Ad-Free Pass", priceNgn: 1500, priceFormatted: "₦1,500" },
+      { id: "yearly", title: "1-Year Sovereign Ad-Free", priceNgn: 10000, priceFormatted: "₦10,000", savings: "Save 44%" },
+      { id: "lifetime", title: "Lifetime Permanent Ad Removal", priceNgn: 18000, priceFormatted: "₦18,000", savings: "Best Value" }
+    ]
+  });
+});
+
+// POST /api/ad-removal/submit-receipt - User submits proof of payment
+app.post("/api/ad-removal/submit-receipt", (req, res) => {
+  const {
+    userId,
+    username,
+    userEmail,
+    amount,
+    currency = "NGN",
+    planType = "monthly",
+    planTitle = "30-Day Ad-Free Pass",
+    reference,
+    receiptUrl,
+    receiptFileName,
+    receiptFileType,
+    receiptNote,
+    senderName,
+    senderPhone
+  } = req.body || {};
+
+  if (!userId || !reference) {
+    return res.status(400).json({ success: false, error: "Missing required parameters: userId and reference ID are required." });
+  }
+
+  const paymentId = req.body.id || `PAY-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
+  const record: ServerAdRemovalPayment = {
+    id: paymentId,
+    userId,
+    username: username || "Aura User",
+    userEmail: userEmail || "",
+    amount: Number(amount) || 1500,
+    currency,
+    planType,
+    planTitle,
+    paymentMethod: "OPAY_TRANSFER",
+    targetAccount: {
+      accountNumber: "8105341700",
+      bank: "OPAY",
+      accountName: "Aura Sovereign / Princewill Geleteye"
+    },
+    reference,
+    receiptUrl: receiptUrl || "",
+    receiptFileName: receiptFileName || "receipt.png",
+    receiptFileType: receiptFileType || "image/png",
+    receiptNote: receiptNote || "",
+    senderName: senderName || "",
+    senderPhone: senderPhone || "",
+    status: "pending",
+    submittedAt: Date.now(),
+    adsRemoved: false,
+    expiresAt: null
+  };
+
+  const existingIndex = serverAdRemovalPaymentsStore.findIndex(p => p.id === paymentId || p.reference === reference);
+  if (existingIndex >= 0) {
+    serverAdRemovalPaymentsStore[existingIndex] = record;
+  } else {
+    serverAdRemovalPaymentsStore.unshift(record);
+  }
+
+  res.json({
+    success: true,
+    paymentId,
+    status: "pending",
+    message: "Pending verification — your receipt is being reviewed. Ads will be removed once verified."
+  });
+});
+
+// GET /api/ad-removal/admin/payments - Admin only: view all submissions
+app.get("/api/ad-removal/admin/payments", (req, res) => {
+  if (!verifyAdminRequest(req)) {
+    return res.status(403).json({ error: "Unauthorized: Admin privileges required." });
+  }
+
+  res.json({
+    success: true,
+    totalCount: serverAdRemovalPaymentsStore.length,
+    pendingCount: serverAdRemovalPaymentsStore.filter(p => p.status === 'pending').length,
+    verifiedCount: serverAdRemovalPaymentsStore.filter(p => p.status === 'verified').length,
+    rejectedCount: serverAdRemovalPaymentsStore.filter(p => p.status === 'rejected').length,
+    payments: serverAdRemovalPaymentsStore
+  });
+});
+
+// POST /api/ad-removal/admin/verify - Admin verifies and approves payment
+app.post("/api/ad-removal/admin/verify", (req, res) => {
+  if (!verifyAdminRequest(req)) {
+    return res.status(403).json({ error: "Unauthorized: Admin privileges required." });
+  }
+
+  const { paymentId, userId, planType = 'monthly', adminEmail } = req.body || {};
+  const payment = serverAdRemovalPaymentsStore.find(p => p.id === paymentId);
+
+  const verifiedAt = Date.now();
+  let expiresAt: number | null = null;
+  if (planType === 'monthly') {
+    expiresAt = verifiedAt + (30 * 24 * 60 * 60 * 1000);
+  } else if (planType === 'yearly') {
+    expiresAt = verifiedAt + (365 * 24 * 60 * 60 * 1000);
+  } else {
+    expiresAt = null; // Lifetime
+  }
+
+  if (payment) {
+    payment.status = "verified";
+    payment.verifiedAt = verifiedAt;
+    payment.verifiedBy = adminEmail || "geleteyeprincewill72@gmail.com";
+    payment.adsRemoved = true;
+    payment.expiresAt = expiresAt;
+  }
+
+  const targetUserId = userId || (payment ? payment.userId : null);
+  if (targetUserId) {
+    verifiedAdFreeUsersMap.set(targetUserId, {
+      adsRemoved: true,
+      expiresAt,
+      planType
+    });
+  }
+
+  res.json({
+    success: true,
+    message: "Payment verified. Ads have been removed from your account.",
+    paymentId,
+    adsRemoved: true,
+    expiresAt
+  });
+});
+
+// POST /api/ad-removal/admin/reject - Admin rejects receipt
+app.post("/api/ad-removal/admin/reject", (req, res) => {
+  if (!verifyAdminRequest(req)) {
+    return res.status(403).json({ error: "Unauthorized: Admin privileges required." });
+  }
+
+  const { paymentId, reason, adminEmail } = req.body || {};
+  const payment = serverAdRemovalPaymentsStore.find(p => p.id === paymentId);
+
+  if (payment) {
+    payment.status = "rejected";
+    payment.rejectionReason = reason || "Payment could not be verified in OPAY account 8105341700.";
+    payment.verifiedAt = Date.now();
+    payment.verifiedBy = adminEmail || "geleteyeprincewill72@gmail.com";
+    payment.adsRemoved = false;
+  }
+
+  res.json({
+    success: true,
+    message: "Payment submission rejected.",
+    paymentId
+  });
+});
+
+// GET /api/ad-removal/my-status/:userId - Checks active or expired status
+app.get("/api/ad-removal/my-status/:userId", (req, res) => {
+  const { userId } = req.params;
+  const userStatus = verifiedAdFreeUsersMap.get(userId);
+
+  if (!userStatus) {
+    return res.json({
+      adsRemoved: false,
+      status: "ACTIVE_ADS",
+      expiresAt: null
+    });
+  }
+
+  if (userStatus.expiresAt && Date.now() > userStatus.expiresAt) {
+    // Expired
+    userStatus.adsRemoved = false;
+    return res.json({
+      adsRemoved: false,
+      status: "EXPIRED",
+      expiresAt: userStatus.expiresAt
+    });
+  }
+
+  res.json({
+    adsRemoved: userStatus.adsRemoved,
+    status: userStatus.adsRemoved ? "ADS_REMOVED" : "ACTIVE_ADS",
+    expiresAt: userStatus.expiresAt,
+    planType: userStatus.planType
+  });
+});
+
 // ==================== PAYSTACK OFFICIAL PAYMENT GATEWAY ENDPOINTS ====================
 
 interface ServerPaystackTx {

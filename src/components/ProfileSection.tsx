@@ -17,10 +17,14 @@ import {
   Film,
   PlaySquare,
   ListMusic,
-  Clock
+  Clock,
+  Zap,
+  CreditCard,
+  AlertCircle
 } from 'lucide-react';
-import { FeedPost } from '../types';
+import { FeedPost, UserProfile } from '../types';
 import { getAutoPlayOnScroll, setAutoPlayOnScroll, getVideoWatchHistory, getVideoPlaylists } from '../utils/videoEngine';
+import { getUserAdStatus } from '../utils/adManager';
 
 interface ProfileSectionProps {
   username: string;
@@ -31,6 +35,7 @@ interface ProfileSectionProps {
   posts: FeedPost[];
   onOpenSettings: () => void;
   onNavigateTab: (tab: string) => void;
+  userProfile?: UserProfile | null;
   theme?: 'dark' | 'light';
 }
 
@@ -43,6 +48,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
   posts,
   onOpenSettings,
   onNavigateTab,
+  userProfile,
   theme = 'dark',
 }) => {
   const [copiedKey, setCopiedKey] = useState(false);
@@ -50,6 +56,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
   const [historyCount] = useState(() => getVideoWatchHistory().length);
   const [playlistsCount] = useState(() => getVideoPlaylists().length);
 
+  const adStatus = getUserAdStatus(userProfile);
   const userPosts = posts.filter((p) => p.authorName === username || p.authorPublicKey === myPublicKey);
 
   const handleToggleFeedAutoplay = () => {
@@ -92,6 +99,14 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
 
             <div className="flex items-center gap-3">
               <button
+                onClick={() => onNavigateTab('remove-ads')}
+                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-mono font-bold text-xs shadow-lg shadow-amber-500/20 transition flex items-center gap-2"
+              >
+                <Zap className="w-4 h-4" />
+                <span>{adStatus.isAdFree ? 'Manage Ad-Free Pass' : 'Remove Ads'}</span>
+              </button>
+
+              <button
                 onClick={onOpenSettings}
                 className="px-4 py-2.5 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-mono font-bold text-xs shadow-lg shadow-purple-950/30 transition flex items-center gap-2"
               >
@@ -108,6 +123,11 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
                 <span className="text-xs font-mono text-cyan-400 bg-cyan-950/60 border border-cyan-800/60 px-2 py-0.5 rounded-full font-normal">
                   {userStatus}
                 </span>
+                {adStatus.isAdFree && (
+                  <span className="text-xs font-mono text-amber-300 bg-amber-950/60 border border-amber-500/40 px-2.5 py-0.5 rounded-full font-bold">
+                    Ad-Free Sovereign ✅
+                  </span>
+                )}
               </h2>
               <p className="text-xs text-slate-400 font-mono mt-0.5">
                 {userEmail ? `Verified Account: ${userEmail}` : `@${username.toLowerCase().replace(/\s+/g, '_')}`}
@@ -147,10 +167,66 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
                 <span className="text-[10px] text-slate-400 font-mono block uppercase mt-0.5">Trust Score</span>
               </div>
               <div className="p-3 rounded-2xl bg-slate-950/60 border border-slate-850 text-center">
-                <span className="text-lg font-bold text-emerald-400 font-mono">Active</span>
-                <span className="text-[10px] text-slate-400 font-mono block uppercase mt-0.5">AI Access</span>
+                <span className={`text-sm font-bold font-mono ${adStatus.isAdFree ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  {adStatus.isAdFree ? 'Ad-Free' : 'Free Tier'}
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono block uppercase mt-0.5">Ad Status</span>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Dedicated Paid Ad Removal & Ad-Free System Card */}
+      <div className="rounded-3xl bg-gradient-to-br from-amber-950/30 via-[#0F1526] to-[#0A0F1D] border border-amber-500/30 p-6 space-y-4 shadow-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-300">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-white font-sans flex items-center gap-2">
+                <span>Paid Ad-Free Sovereign Status</span>
+                <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
+                  adStatus.isAdFree 
+                    ? 'bg-emerald-950 border border-emerald-500 text-emerald-300' 
+                    : 'bg-amber-950 border border-amber-500 text-amber-300'
+                }`}>
+                  {adStatus.statusBadge}
+                </span>
+              </h3>
+              <p className="text-xs text-slate-400 font-mono mt-0.5">
+                {adStatus.isAdFree 
+                  ? `All third-party banner ads & video interruptions are suppressed.` 
+                  : `Free tier active with third-party ads enabled. Upgrade for zero interruptions.`
+                }
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => onNavigateTab('remove-ads')}
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-mono font-bold text-xs transition flex items-center justify-center gap-2 shadow-md shrink-0"
+          >
+            <CreditCard className="w-4 h-4" />
+            <span>{adStatus.isAdFree ? 'View Passes & Ledger' : 'Remove Ads with OPAY'}</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono text-slate-300">
+          <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-850">
+            <span className="text-[10px] text-slate-500 block uppercase">Ad Removal Mode:</span>
+            <strong className="text-slate-100">{adStatus.isAdFree ? 'Active (Component Level)' : 'Standard (Ads Enabled)'}</strong>
+          </div>
+
+          <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-850">
+            <span className="text-[10px] text-slate-500 block uppercase">Plan / Expiry:</span>
+            <strong className="text-amber-300">{adStatus.expiryFormatted || (adStatus.isAdFree ? 'Lifetime Sovereign' : 'None')}</strong>
+          </div>
+
+          <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-850">
+            <span className="text-[10px] text-slate-500 block uppercase">Target OPAY:</span>
+            <strong className="text-slate-100">8105341700</strong>
           </div>
         </div>
       </div>

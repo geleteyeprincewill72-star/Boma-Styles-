@@ -178,6 +178,27 @@
         "timestamp": { "type": "integer" }
       },
       "required": ["id", "reviewId", "reporterUserId", "reason", "timestamp"]
+    },
+    "AdRemovalPayment": {
+      "title": "Ad Removal Payment",
+      "description": "Paid ad removal purchase submission, OPAY receipt, and admin verification status.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "username": { "type": "string" },
+        "amount": { "type": "number" },
+        "currency": { "type": "string" },
+        "planType": { "type": "string" },
+        "planTitle": { "type": "string" },
+        "paymentMethod": { "type": "string" },
+        "reference": { "type": "string" },
+        "receiptUrl": { "type": "string" },
+        "status": { "type": "string" },
+        "submittedAt": { "type": "integer" },
+        "adsRemoved": { "type": "boolean" }
+      },
+      "required": ["id", "userId", "username", "amount", "currency", "planType", "reference", "status", "submittedAt", "adsRemoved"]
     }
   },
   "firestore": {
@@ -224,6 +245,10 @@
     "review_reports/{reportId}": {
       "schema": "ReviewReport",
       "description": "Community review moderation reports"
+    },
+    "ad_removal_payments/{paymentId}": {
+      "schema": "AdRemovalPayment",
+      "description": "Paid ad removal transactions, receipt uploads, and admin verification records"
     }
   }
 }

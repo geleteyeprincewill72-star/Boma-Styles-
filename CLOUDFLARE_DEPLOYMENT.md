@@ -21,7 +21,7 @@ Cloudflare Workers routing is configured for SPA single-page fallback across all
 - `/profile` (Creator Profile & Video Hub)
 - `/messages` (Encrypted Aura Messaging & Circles)
 - `/settings` (Preferences, Message Retention, Storage Tiers)
-- `/ai` (OmniMind Universal Intelligence Studio)
+- `/creators` (Creators Discovery & WebRTC Communications)
 - `/studio` (Heritage & Screenplay Studio)
 - `/video` (Video Theater & Generation Pipeline)
 - `/creator` (Creator Economy & Tipping)

@@ -389,6 +389,35 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <ArrowRight className="w-3.5 h-3.5 ml-1" />
             </div>
           </div>
+
+          {/* Card 9: Remove Ads & Ad-Free Pass */}
+          <div
+            onClick={() => onNavigateTab('remove-ads')}
+            className={`group cursor-pointer rounded-2xl p-5 border transition-all duration-200 hover:-translate-y-1 shadow-lg relative overflow-hidden ${
+              isLight
+                ? 'bg-amber-50/60 border-amber-200 hover:border-amber-400'
+                : 'bg-gradient-to-br from-amber-950/30 via-[#0F1526] to-[#0A0F1D] border-amber-500/30 hover:border-amber-500/60 shadow-amber-950/20'
+            }`}
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div className="p-3 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 group-hover:scale-110 transition">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <span className="text-[10px] font-mono text-amber-300 font-bold bg-amber-950/80 border border-amber-800 px-2 py-0.5 rounded-full">
+                OPAY Verified
+              </span>
+            </div>
+            <h4 className="text-sm font-bold text-slate-100 font-sans group-hover:text-amber-300 transition">
+              REMOVE ADS (AD-FREE)
+            </h4>
+            <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+              Eliminate third-party ads and video pauses. Submit receipt for instant sovereign verification.
+            </p>
+            <div className="mt-4 flex items-center text-xs font-mono font-bold text-amber-400 group-hover:translate-x-1 transition">
+              <span>Remove Ads Now</span>
+              <ArrowRight className="w-3.5 h-3.5 ml-1" />
+            </div>
+          </div>
         </div>
       </div>
 

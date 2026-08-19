@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Sparkles, ExternalLink, ShieldCheck, Globe, AlertCircle } from 'lucide-react';
+import { isUserAdFree } from '../utils/adManager';
+import { UserProfile } from '../types';
 
 interface GoogleAdSenseAdProps {
   clientPublisherId?: string; // e.g. "ca-pub-XXXXXXXXXXXXXX"
@@ -10,6 +12,7 @@ interface GoogleAdSenseAdProps {
   theme?: 'dark' | 'light';
   fallbackTitle?: string;
   fallbackDesc?: string;
+  userProfile?: UserProfile | null;
 }
 
 export const GoogleAdSenseAd: React.FC<GoogleAdSenseAdProps> = ({
@@ -20,13 +23,24 @@ export const GoogleAdSenseAd: React.FC<GoogleAdSenseAdProps> = ({
   className = '',
   theme = 'dark',
   fallbackTitle = 'Aura Cloud Services & AI Nodes',
-  fallbackDesc = 'Deploy decentralized container pipelines globally. Get $50 credits when upgrading your ledger.'
+  fallbackDesc = 'Deploy decentralized container pipelines globally. Get $50 credits when upgrading your ledger.',
+  userProfile
 }) => {
+  // If user has paid to remove ads or is admin, completely suppress rendering
+  if (isUserAdFree(userProfile)) {
+    return null;
+  }
+
   const isLight = theme === 'light';
   const [adLoaded, setAdLoaded] = useState<boolean>(false);
   const [adError, setAdError] = useState<boolean>(false);
 
   useEffect(() => {
+    // If user is ad-free, do not inject SDK script
+    if (isUserAdFree(userProfile)) {
+      return;
+    }
+
     // Inject Google AdSense Script if not already loaded in document
     const scriptId = 'google-adsense-sdk-script';
     let scriptElem = document.getElementById(scriptId) as HTMLScriptElement | null;
@@ -51,7 +65,7 @@ export const GoogleAdSenseAd: React.FC<GoogleAdSenseAdProps> = ({
       console.warn("Google AdSense auto-push notice:", e);
       setAdError(true);
     }
-  }, [clientPublisherId, adSlotId]);
+  }, [clientPublisherId, adSlotId, userProfile]);
 
   return (
     <div className={`w-full my-4 relative rounded-2xl p-4 overflow-hidden border font-sans transition-all duration-200 ${

@@ -26,7 +26,9 @@ import {
   Globe,
   Wand2,
   Layers,
-  MessageSquareCode
+  MessageSquareCode,
+  ShieldCheck,
+  DollarSign
 } from 'lucide-react';
 
 export type TabType = 
@@ -49,7 +51,9 @@ export type TabType =
   | 'wallet' 
   | 'monetization'
   | 'reviews'
-  | 'admin';
+  | 'admin'
+  | 'remove-ads'
+  | 'admin-ad-payments';
 
 interface NavigationSidebarProps {
   activeTab: string;
@@ -81,6 +85,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
 
   const NAV_ITEMS = [
     { id: 'home', label: 'HOME', icon: Home, badge: null, color: 'text-purple-400' },
+    { id: 'remove-ads', label: 'REMOVE ADS', icon: ShieldCheck, badge: 'Ad-Free', color: 'text-amber-400' },
     { id: 'creators', label: 'CREATORS', icon: Users, badge: 'Hot', color: 'text-purple-400' },
     { id: 'search', label: 'AI WEB SEARCH', icon: Globe, badge: 'Live', color: 'text-cyan-400' },
     { id: 'imagegen', label: 'AI IMAGE GEN', icon: ImageIcon, badge: '4K', color: 'text-purple-300' },
@@ -105,6 +110,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   }
 
   if (isAdmin) {
+    NAV_ITEMS.push({ id: 'admin-ad-payments', label: 'AD PAYMENTS LEDGER', icon: DollarSign, badge: 'OPAY', color: 'text-emerald-400' });
     NAV_ITEMS.push({ id: 'admin', label: 'ADMIN PANEL', icon: Shield, badge: 'Admin', color: 'text-red-400' });
   }
 

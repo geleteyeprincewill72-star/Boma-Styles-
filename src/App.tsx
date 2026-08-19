@@ -62,6 +62,8 @@ import AuthScreen from './components/AuthScreen';
 import MessagingSection from './components/MessagingSection';
 import NotificationsSection from './components/NotificationsSection';
 import AdminDashboardSection from './components/AdminDashboardSection';
+import RemoveAdsSection from './components/RemoveAdsSection';
+import AdminAdPaymentsSection from './components/AdminAdPaymentsSection';
 import SovereignDiscoverySection from './components/SovereignDiscoverySection';
 import MonetizationSection from './components/MonetizationSection';
 import { AdsterraGlobalScripts } from './components/AdsterraAd';
@@ -239,7 +241,7 @@ const INITIAL_NODES: NetworkNode[] = [
 ];
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'home' | 'messages' | 'friends' | 'calls' | 'creators' | 'search' | 'videogen' | 'imagegen' | 'aitools' | 'mycreations' | 'audio' | 'feed' | 'videos' | 'notifications' | 'profile' | 'settings' | 'wallet' | 'monetization' | 'reviews' | 'studio' | 'network' | 'admin' | 'discovery'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'messages' | 'friends' | 'calls' | 'creators' | 'search' | 'videogen' | 'imagegen' | 'aitools' | 'mycreations' | 'audio' | 'feed' | 'videos' | 'notifications' | 'profile' | 'settings' | 'wallet' | 'monetization' | 'reviews' | 'studio' | 'network' | 'admin' | 'discovery' | 'remove-ads' | 'admin-ad-payments'>('home');
   const [username, setUsername] = useState('AnonPeer_402');
   const [avatar, setAvatar] = useState('https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=60');
   const [userStatus, setUserStatus] = useState<string>(() => {
@@ -1242,8 +1244,8 @@ export default function App() {
       isLight ? 'bg-slate-50 text-slate-800 animate-fade-in' : 'bg-[#070B13] text-slate-100'
     }`}>
       
-      {/* Adsterra Network Global Script Engine */}
-      <AdsterraGlobalScripts />
+      {/* Adsterra Network Global Script Engine (Suppressed if user has removed ads) */}
+      <AdsterraGlobalScripts userProfile={userProfile} />
 
       {/* Operating System / Web Version Update Checker */}
       <AppVersionNotifier onOpenWhatsNew={() => setShowWhatsNewModal(true)} />
@@ -1666,6 +1668,7 @@ export default function App() {
               posts={posts}
               onOpenSettings={() => setActiveTab('settings')}
               onNavigateTab={(tab) => setActiveTab(tab as any)}
+              userProfile={userProfile}
               theme={theme}
             />
           )}
@@ -2187,6 +2190,8 @@ export default function App() {
               currentUserEmail={currentUser?.email || ''}
               isAppCreator={isAppCreator}
               uid={currentUser?.uid}
+              userProfile={userProfile}
+              onNavigateToTab={(tab) => setActiveTab(tab as any)}
             />
           )}
 
@@ -2325,6 +2330,20 @@ export default function App() {
             <AdminDashboardSection
               adminUserId={currentUser.uid}
               adminUserName={username}
+            />
+          )}
+
+          {activeTab === 'remove-ads' && (
+            <RemoveAdsSection
+              userProfile={userProfile}
+              onNavigate={(tab) => setActiveTab(tab as any)}
+            />
+          )}
+
+          {activeTab === 'admin-ad-payments' && currentUser && (userProfile?.role === 'admin' || isAppCreator) && (
+            <AdminAdPaymentsSection
+              userProfile={userProfile}
+              onNavigate={(tab) => setActiveTab(tab as any)}
             />
           )}
         </main>

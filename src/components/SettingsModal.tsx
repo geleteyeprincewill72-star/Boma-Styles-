@@ -26,8 +26,10 @@ import {
 import { listenToPaymentConfig, PaymentConfig } from '../utils/firebase';
 import { Language, SUPPORTED_LANGUAGES } from '../utils/translations';
 import DeviceSecurityModal from './DeviceSecurityModal';
-import { ShieldCheck, Lock, Play, Video } from 'lucide-react';
+import { ShieldCheck, Lock, Play, Video, Zap, CreditCard, Sparkles as SparklesIcon } from 'lucide-react';
 import { getAutoPlayOnScroll, setAutoPlayOnScroll } from '../utils/videoEngine';
+import { getUserAdStatus } from '../utils/adManager';
+import { UserProfile } from '../types';
 
 interface SettingsModalProps {
   username: string;
@@ -44,6 +46,8 @@ interface SettingsModalProps {
   isAppCreator?: boolean;
   uid?: string;
   triggerNotification?: (msg: string) => void;
+  userProfile?: UserProfile | null;
+  onNavigateToTab?: (tab: string) => void;
 }
 
 export default function SettingsModal({
@@ -60,7 +64,9 @@ export default function SettingsModal({
   currentUserEmail = '',
   isAppCreator: isAppCreatorProp = false,
   uid,
-  triggerNotification
+  triggerNotification,
+  userProfile,
+  onNavigateToTab
 }: SettingsModalProps) {
   const [profileName, setProfileName] = useState(username);
   const [profileAvatar, setProfileAvatar] = useState(avatar);
@@ -375,6 +381,58 @@ export default function SettingsModal({
             </button>
           </div>
         </form>
+
+        {/* Paid Ad-Removal & Sovereign Ad-Free Status Card */}
+        {(() => {
+          const adStatus = getUserAdStatus(userProfile);
+          return (
+            <div className={`p-4 border rounded-xl space-y-4 ${
+              isLight 
+                ? 'bg-amber-50/60 border-amber-200' 
+                : 'bg-gradient-to-br from-amber-950/20 via-slate-950/60 to-slate-950/40 border-amber-500/30'
+            }`}>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3 border-dashed border-amber-500/30">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-amber-400" />
+                  <h4 className="text-xs font-bold font-sans text-slate-100">Paid Ad-Removal & Sovereign Experience</h4>
+                </div>
+                <span className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full font-bold self-start sm:self-auto ${
+                  adStatus.isAdFree 
+                    ? 'bg-emerald-950/90 border border-emerald-500/50 text-emerald-300' 
+                    : 'bg-amber-950/90 border border-amber-500/50 text-amber-300'
+                }`}>
+                  {adStatus.statusText}
+                </span>
+              </div>
+
+              <p className={`text-[11px] font-sans leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                {adStatus.isAdFree
+                  ? `Your account is active in Ad-Free mode. All banner ads, social bars, and video interruptions are prevented from rendering.`
+                  : `Remove all third-party banner ads, sponsored reels, and popups with 30-day (₦1,500), 1-year (₦10,000), or lifetime (₦18,000) passes via direct OPAY bank transfer.`
+                }
+              </p>
+
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
+                <div className="text-[10px] font-mono text-slate-400">
+                  Target Account: <strong className="text-amber-300">OPAY 8105341700</strong>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onNavigateToTab) {
+                      onNavigateToTab('remove-ads');
+                    }
+                  }}
+                  className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-mono font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5"
+                >
+                  <CreditCard className="w-3.5 h-3.5" />
+                  <span>{adStatus.isAdFree ? 'Manage Ad-Free Passes' : 'Remove Ads with OPAY'}</span>
+                </button>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* User Privacy, Data Usage, & Location Consent Management Card */}
         <div className={`p-4 border rounded-xl space-y-4 ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/40 border-slate-850'}`}>

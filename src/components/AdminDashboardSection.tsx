@@ -82,6 +82,7 @@ import {
 import { DollarSign, Database, Ban, ShieldAlert, Cpu as CpuIcon, Layers, Eye, Sparkles, MessageSquareCode } from 'lucide-react';
 import AdminUpdatesSection from './AdminUpdatesSection';
 import AdminReviewsSection from './AdminReviewsSection';
+import AdminAdPaymentsSection from './AdminAdPaymentsSection';
 
 interface AdminDashboardSectionProps {
   adminUserId: string;
@@ -98,7 +99,7 @@ export default function AdminDashboardSection({
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
 
   // Sub-sections
-  const [activeTab, setActiveTab] = useState<'metrics' | 'users' | 'reports' | 'broadcast' | 'audit' | 'billing' | 'creator_zip' | 'security' | 'monetization' | 'locations' | 'updates' | 'reviews_mod'>('metrics');
+  const [activeTab, setActiveTab] = useState<'metrics' | 'users' | 'reports' | 'broadcast' | 'audit' | 'billing' | 'creator_zip' | 'security' | 'monetization' | 'locations' | 'updates' | 'reviews_mod' | 'ad_payments'>('metrics');
   const [locationSearchText, setLocationSearchText] = useState('');
   const [inspectLocationUser, setInspectLocationUser] = useState<UserProfile | null>(null);
 
@@ -698,6 +699,13 @@ export default function AdminDashboardSection({
           id="admin-locations-tab"
         >
           <MapPin className="w-3.5 h-3.5 text-cyan-400" /> 📍 Creator User Location Radar
+        </button>
+        <button
+          onClick={() => { setActiveTab('ad_payments'); setStatusMessage(null); }}
+          className={`px-3 py-1.5 rounded-lg border transition uppercase flex items-center gap-1.5 ${activeTab === 'ad_payments' ? 'bg-amber-950/80 border-amber-500/80 text-amber-300 font-bold shadow-md shadow-amber-950/50' : 'bg-slate-950/40 border-slate-900 text-amber-400 hover:text-amber-200'}`}
+          id="admin-ad-payments-tab"
+        >
+          <DollarSign className="w-3.5 h-3.5 text-amber-400" /> 💳 Ad-Removal OPAY Receipts
         </button>
         <button
           onClick={() => { setActiveTab('creator_zip'); setStatusMessage(null); }}
@@ -2131,6 +2139,21 @@ export default function AdminDashboardSection({
           <AdminReviewsSection 
             adminUserId={adminUserId}
             adminUserName={adminUserName}
+          />
+        </div>
+      )}
+
+      {/* AD-REMOVAL OPAY RECEIPTS & VERIFICATION VIEW */}
+      {activeTab === 'ad_payments' && (
+        <div className="animate-fadeIn">
+          <AdminAdPaymentsSection 
+            userProfile={{
+              id: adminUserId,
+              uid: adminUserId,
+              username: adminUserName,
+              role: 'admin',
+              adsRemoved: true
+            } as any}
           />
         </div>
       )}

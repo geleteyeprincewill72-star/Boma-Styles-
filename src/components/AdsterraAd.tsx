@@ -1,14 +1,29 @@
 import React, { useEffect } from 'react';
 import { Sparkles, ShieldCheck, Megaphone } from 'lucide-react';
+import { isUserAdFree } from '../utils/adManager';
+import { UserProfile } from '../types';
 
 const SOCIAL_BAR_SCRIPT_SRC = 'https://pl30772147.effectivecpmnetwork.com/74/28/9b/74289b3f19835294855fcfa189d920e2.js';
 
+interface AdsterraGlobalScriptsProps {
+  userProfile?: UserProfile | null;
+}
+
 /**
  * Global component that mounts the exact Adsterra Social Bar script
- * according to Adsterra's recommended placement.
+ * according to Adsterra's recommended placement, but ONLY if user has NOT paid to remove ads.
  */
-export const AdsterraSocialBar: React.FC = () => {
+export const AdsterraSocialBar: React.FC<AdsterraGlobalScriptsProps> = ({ userProfile }) => {
   useEffect(() => {
+    // If user has removed ads, do not inject script and clean up if already present
+    if (isUserAdFree(userProfile)) {
+      const existingScript = document.querySelector(`script[src="${SOCIAL_BAR_SCRIPT_SRC}"]`);
+      if (existingScript) {
+        existingScript.remove();
+      }
+      return;
+    }
+
     // Check if the exact script is already present in document
     const existingScript = document.querySelector(`script[src="${SOCIAL_BAR_SCRIPT_SRC}"]`);
     
@@ -18,7 +33,7 @@ export const AdsterraSocialBar: React.FC = () => {
       script.async = true;
       document.head.appendChild(script);
     }
-  }, []);
+  }, [userProfile]);
 
   return null;
 };
@@ -29,6 +44,7 @@ export const AdsterraGlobalScripts = AdsterraSocialBar;
 export interface AdsterraAdProps {
   className?: string;
   theme?: 'dark' | 'light';
+  userProfile?: UserProfile | null;
 }
 
 /**
@@ -37,7 +53,13 @@ export interface AdsterraAdProps {
 export const AdsterraAd: React.FC<AdsterraAdProps> = ({
   className = '',
   theme = 'dark',
+  userProfile
 }) => {
+  // If user is ad-free, completely suppress rendering
+  if (isUserAdFree(userProfile)) {
+    return null;
+  }
+
   const isLight = theme === 'light';
 
   return (

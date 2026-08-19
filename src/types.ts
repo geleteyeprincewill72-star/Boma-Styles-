@@ -432,3 +432,73 @@ export interface CallHistoryItem {
   durationSeconds: number;
 }
 
+// ==================== PAID AD REMOVAL SYSTEM TYPES ====================
+
+export type AdRemovalPlanType = 'monthly' | 'yearly' | 'lifetime';
+
+export interface AdRemovalPlan {
+  id: AdRemovalPlanType;
+  title: string;
+  durationLabel: string;
+  priceNgn: number;
+  priceFormatted: string;
+  popular?: boolean;
+  savings?: string;
+  badge?: string;
+  features: string[];
+}
+
+export interface AdRemovalPaymentRecord {
+  id: string;
+  userId: string;
+  username: string;
+  userEmail?: string;
+  amount: number;
+  currency: string;
+  planType: AdRemovalPlanType;
+  planTitle: string;
+  paymentMethod: 'OPAY_TRANSFER' | 'PAYSTACK_DIRECT';
+  targetAccount: {
+    bank: string;
+    accountNumber: string;
+    accountName: string;
+  };
+  reference: string;
+  receiptUrl?: string;
+  receiptFileName?: string;
+  receiptFileType?: string;
+  receiptNote?: string;
+  senderName?: string;
+  senderPhone?: string;
+  status: 'pending' | 'verified' | 'rejected';
+  rejectionReason?: string;
+  submittedAt: number;
+  verifiedAt?: number;
+  verifiedBy?: string;
+  adsRemoved: boolean;
+  expiresAt?: number | null; // null for lifetime
+}
+
+export interface UserProfile {
+  uid: string;
+  username: string; // unique @username
+  displayName: string;
+  email: string;
+  phoneNumber?: string;
+  bio: string;
+  avatar: string;
+  coverPhoto: string;
+  website: string;
+  location: string;
+  isVerified: boolean;
+  role: 'user' | 'moderator' | 'admin';
+  status: 'active' | 'suspended';
+  customStatus?: string;
+  adsRemoved?: boolean;
+  adsRemovedUntil?: number | null; // Timestamp ms, null for lifetime
+  adsRemovedPlan?: 'monthly' | 'yearly' | 'lifetime';
+  lastVerifiedPaymentRef?: string;
+  createdAt: number;
+}
+
+

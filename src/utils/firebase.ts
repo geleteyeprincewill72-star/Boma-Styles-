@@ -40,7 +40,8 @@ import {
   ReviewCategory,
   ReviewStatus,
   ReviewReportReason,
-  ReviewReportDoc
+  ReviewReportDoc,
+  AdRemovalPaymentRecord
 } from '../types';
 
 const firebaseConfig = {
@@ -307,6 +308,10 @@ export interface UserProfile {
   role: 'user' | 'moderator' | 'admin';
   status: 'active' | 'suspended';
   customStatus?: string; // Custom user presence status, e.g. 'Offline', 'Deep Work', 'Open to Networking'
+  adsRemoved?: boolean;
+  adsRemovedUntil?: number | null; // Timestamp ms, null for lifetime
+  adsRemovedPlan?: 'monthly' | 'yearly' | 'lifetime';
+  lastVerifiedPaymentRef?: string;
   createdAt: number;
 }
 
@@ -1432,6 +1437,327 @@ export async function resolveReviewReport(
     handleFirestoreError(err, OperationType.UPDATE, path);
   }
 }
+
+// ==================== 15. PAID AD REMOVAL SYSTEM HELPERS ====================
+
+const AD_PAYMENTS_COLLECTION = 'ad_removal_payments';
+const LOCAL_AD_PAYMENTS_KEY = 'aura_local_ad_payments';
+
+export async function submitAdRemovalPayment(payment: Omit<AdRemovalPaymentRecord, 'id'>): Promise<string> {
+  const paymentId = `PAY-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+  const path = `${AD_PAYMENTS_COLLECTION}/${paymentId}`;
+  
+  const record: AdRemovalPaymentRecord = {
+    ...payment,
+    id: paymentId,
+    status: 'pending',
+    adsRemoved: false,
+    submittedAt: Date.now()
+  };
+
+  // Local storage cache backup
+  try {
+    const raw = localStorage.getItem(LOCAL_AD_PAYMENTS_KEY);
+    const existing: AdRemovalPaymentRecord[] = raw ? JSON.parse(raw) : [];
+    existing.unshift(record);
+    localStorage.setItem(LOCAL_AD_PAYMENTS_KEY, JSON.stringify(existing.slice(0, 100)));
+  } catch (_) {}
+
+  try {
+    await setDoc(doc(db, AD_PAYMENTS_COLLECTION, paymentId), record);
+    return paymentId;
+  } catch (err) {
+    console.warn("Firestore offline during payment submission, cached locally:", err);
+    // Still send to server proxy endpoint for redundancy
+    try {
+      await fetch('/api/ad-removal/submit-receipt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(record)
+      });
+    } catch (_) {}
+    return paymentId;
+  }
+}
+
+export async function fetchUserAdRemovalPayments(userId: string): Promise<AdRemovalPaymentRecord[]> {
+  const path = AD_PAYMENTS_COLLECTION;
+  try {
+    const q = query(
+      collection(db, path),
+      where('userId', '==', userId),
+      orderBy('submittedAt', 'desc'),
+      limit(50)
+    );
+    const snap = await getDocs(q);
+    const list: AdRemovalPaymentRecord[] = [];
+    snap.forEach((d) => list.push(d.data() as AdRemovalPaymentRecord));
+    return list;
+  } catch (err) {
+    console.warn("Could not query user ad payments from Firestore, checking local cache:", err);
+    try {
+      const raw = localStorage.getItem(LOCAL_AD_PAYMENTS_KEY);
+      if (raw) {
+        const list: AdRemovalPaymentRecord[] = JSON.parse(raw);
+        return list.filter(p => p.userId === userId);
+      }
+    } catch (_) {}
+    return [];
+  }
+}
+
+export function listenToUserAdRemovalPayments(
+  userId: string, 
+  callback: (payments: AdRemovalPaymentRecord[]) => void
+): () => void {
+  const path = AD_PAYMENTS_COLLECTION;
+  try {
+    const q = query(
+      collection(db, path),
+      where('userId', '==', userId),
+      orderBy('submittedAt', 'desc'),
+      limit(50)
+    );
+    return onSnapshot(q, (snap) => {
+      const list: AdRemovalPaymentRecord[] = [];
+      snap.forEach((d) => list.push(d.data() as AdRemovalPaymentRecord));
+      callback(list);
+    }, (err) => {
+      console.warn("Ad removal payments listener fallback to cache:", err);
+      try {
+        const raw = localStorage.getItem(LOCAL_AD_PAYMENTS_KEY);
+        if (raw) {
+          const list: AdRemovalPaymentRecord[] = JSON.parse(raw);
+          callback(list.filter(p => p.userId === userId));
+        }
+      } catch (_) {}
+    });
+  } catch (_) {
+    return () => {};
+  }
+}
+
+export async function fetchAllAdRemovalPayments(): Promise<AdRemovalPaymentRecord[]> {
+  const path = AD_PAYMENTS_COLLECTION;
+  try {
+    const q = query(
+      collection(db, path),
+      orderBy('submittedAt', 'desc'),
+      limit(100)
+    );
+    const snap = await getDocs(q);
+    const list: AdRemovalPaymentRecord[] = [];
+    snap.forEach((d) => list.push(d.data() as AdRemovalPaymentRecord));
+    return list;
+  } catch (err) {
+    console.warn("Could not query all ad payments from Firestore, checking API / cache:", err);
+    try {
+      const res = await fetch('/api/ad-removal/admin/payments');
+      if (res.ok) {
+        const json = await res.json();
+        return json.payments || [];
+      }
+    } catch (_) {}
+    try {
+      const raw = localStorage.getItem(LOCAL_AD_PAYMENTS_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (_) {}
+    return [];
+  }
+}
+
+export function listenToAllAdRemovalPayments(
+  callback: (payments: AdRemovalPaymentRecord[]) => void
+): () => void {
+  const path = AD_PAYMENTS_COLLECTION;
+  try {
+    const q = query(
+      collection(db, path),
+      orderBy('submittedAt', 'desc'),
+      limit(100)
+    );
+    return onSnapshot(q, (snap) => {
+      const list: AdRemovalPaymentRecord[] = [];
+      snap.forEach((d) => list.push(d.data() as AdRemovalPaymentRecord));
+      callback(list);
+    }, (err) => {
+      console.warn("All ad payments snapshot error, fetching via API:", err);
+      fetchAllAdRemovalPayments().then(callback);
+    });
+  } catch (_) {
+    fetchAllAdRemovalPayments().then(callback);
+    return () => {};
+  }
+}
+
+export async function verifyAdRemovalPayment(
+  paymentId: string, 
+  adminUserId: string, 
+  adminEmail: string
+): Promise<{ success: boolean; message: string }> {
+  const path = `${AD_PAYMENTS_COLLECTION}/${paymentId}`;
+  try {
+    // 1. Fetch payment details
+    const payDoc = await getDoc(doc(db, AD_PAYMENTS_COLLECTION, paymentId));
+    if (!payDoc.exists()) {
+      throw new Error(`Payment record ${paymentId} not found.`);
+    }
+    const payment = payDoc.data() as AdRemovalPaymentRecord;
+    const verifiedAt = Date.now();
+
+    // Calculate expiration:
+    // monthly: 30 days = 30 * 24 * 60 * 60 * 1000
+    // yearly: 365 days = 365 * 24 * 60 * 60 * 1000
+    // lifetime: null
+    let expiresAt: number | null = null;
+    if (payment.planType === 'monthly') {
+      expiresAt = verifiedAt + (30 * 24 * 60 * 60 * 1000);
+    } else if (payment.planType === 'yearly') {
+      expiresAt = verifiedAt + (365 * 24 * 60 * 60 * 1000);
+    } else {
+      expiresAt = null; // Lifetime
+    }
+
+    // 2. Update payment document
+    await updateDoc(doc(db, AD_PAYMENTS_COLLECTION, paymentId), {
+      status: 'verified',
+      verifiedAt,
+      verifiedBy: adminEmail || adminUserId,
+      adsRemoved: true,
+      expiresAt
+    });
+
+    // 3. Update user profile to enable adsRemoved
+    await updateDoc(doc(db, 'users', payment.userId), {
+      adsRemoved: true,
+      adsRemovedUntil: expiresAt,
+      adsRemovedPlan: payment.planType,
+      lastVerifiedPaymentRef: payment.reference
+    });
+
+    // 4. Update local caches
+    try {
+      const raw = localStorage.getItem(LOCAL_AD_PAYMENTS_KEY);
+      if (raw) {
+        const list: AdRemovalPaymentRecord[] = JSON.parse(raw);
+        const updated = list.map(p => p.id === paymentId ? {
+          ...p,
+          status: 'verified' as const,
+          verifiedAt,
+          verifiedBy: adminEmail,
+          adsRemoved: true,
+          expiresAt
+        } : p);
+        localStorage.setItem(LOCAL_AD_PAYMENTS_KEY, JSON.stringify(updated));
+      }
+      
+      const userKey = `aura_user_profile_${payment.userId}`;
+      const userRaw = localStorage.getItem(userKey);
+      if (userRaw) {
+        const u = JSON.parse(userRaw);
+        u.adsRemoved = true;
+        u.adsRemovedUntil = expiresAt;
+        u.adsRemovedPlan = payment.planType;
+        u.lastVerifiedPaymentRef = payment.reference;
+        localStorage.setItem(userKey, JSON.stringify(u));
+      }
+      
+      // Update global active user cache if current user
+      const currentUserRaw = localStorage.getItem('aura_user');
+      if (currentUserRaw) {
+        const cu = JSON.parse(currentUserRaw);
+        if (cu.uid === payment.userId || cu.id === payment.userId) {
+          cu.adsRemoved = true;
+          cu.adsRemovedUntil = expiresAt;
+          cu.adsRemovedPlan = payment.planType;
+          localStorage.setItem('aura_user', JSON.stringify(cu));
+        }
+      }
+    } catch (_) {}
+
+    // 5. Notify server backend for persistence
+    try {
+      await fetch('/api/ad-removal/admin/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paymentId,
+          userId: payment.userId,
+          planType: payment.planType,
+          reference: payment.reference,
+          adminEmail
+        })
+      });
+    } catch (_) {}
+
+    return {
+      success: true,
+      message: 'Payment verified. Ads have been removed from your account.'
+    };
+  } catch (err: any) {
+    console.error("Error verifying ad removal payment:", err);
+    throw err;
+  }
+}
+
+export async function rejectAdRemovalPayment(
+  paymentId: string, 
+  reason: string,
+  adminUserId: string, 
+  adminEmail: string
+): Promise<{ success: boolean; message: string }> {
+  const path = `${AD_PAYMENTS_COLLECTION}/${paymentId}`;
+  try {
+    const payDoc = await getDoc(doc(db, AD_PAYMENTS_COLLECTION, paymentId));
+    if (!payDoc.exists()) {
+      throw new Error(`Payment record ${paymentId} not found.`);
+    }
+    const payment = payDoc.data() as AdRemovalPaymentRecord;
+
+    await updateDoc(doc(db, AD_PAYMENTS_COLLECTION, paymentId), {
+      status: 'rejected',
+      rejectionReason: reason || 'Payment receipt could not be verified with OPAY account 8105341700.',
+      verifiedAt: Date.now(),
+      verifiedBy: adminEmail || adminUserId,
+      adsRemoved: false
+    });
+
+    // Update local caches
+    try {
+      const raw = localStorage.getItem(LOCAL_AD_PAYMENTS_KEY);
+      if (raw) {
+        const list: AdRemovalPaymentRecord[] = JSON.parse(raw);
+        const updated = list.map(p => p.id === paymentId ? {
+          ...p,
+          status: 'rejected' as const,
+          rejectionReason: reason,
+          verifiedAt: Date.now(),
+          verifiedBy: adminEmail,
+          adsRemoved: false
+        } : p);
+        localStorage.setItem(LOCAL_AD_PAYMENTS_KEY, JSON.stringify(updated));
+      }
+    } catch (_) {}
+
+    // Notify backend
+    try {
+      await fetch('/api/ad-removal/admin/reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentId, reason, adminEmail })
+      });
+    } catch (_) {}
+
+    return {
+      success: true,
+      message: 'Payment rejected. Reason provided to user.'
+    };
+  } catch (err: any) {
+    console.error("Error rejecting ad removal payment:", err);
+    throw err;
+  }
+}
+
 
 
 

@@ -161,10 +161,10 @@ export const FirstTimePostPreferenceModal: React.FC<Props> = ({
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-bold font-mono uppercase text-amber-300 tracking-wider">
-                First-Time Creator Preferences
+                Feed & Publishing Preferences
               </h2>
               <p className="text-xs font-mono text-slate-400">
-                Customize How You Want Your Posts & Feed To Be
+                Customize your feed layout, media quality, and presentation formats
               </p>
             </div>
           </div>
@@ -179,17 +179,17 @@ export const FirstTimePostPreferenceModal: React.FC<Props> = ({
           </button>
         </div>
 
-        {/* 15-Second Auto-Bypass Interview Banner */}
+        {/* 15-Second Auto-Bypass Banner */}
         <div className="bg-amber-950/50 border border-amber-500/40 rounded-xl p-3 flex items-center justify-between text-xs font-mono text-amber-200 relative z-10 shadow-md">
           <div className="flex items-center gap-2">
             <Zap className="w-4 h-4 text-amber-400 animate-pulse" />
-            <span>Auto-bypassing interview in <strong className="text-amber-300 font-bold text-sm">{countdown}s</strong>...</span>
+            <span>Auto-saving default preferences in <strong className="text-amber-300 font-bold text-sm">{countdown}s</strong>...</span>
           </div>
           <button
             onClick={() => handleSave()}
             className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-mono font-bold text-[11px] rounded-lg transition uppercase tracking-wider shadow"
           >
-            Bypass Now
+            Save & Continue
           </button>
         </div>
 
@@ -211,7 +211,7 @@ export const FirstTimePostPreferenceModal: React.FC<Props> = ({
             }`}
           >
             <Sliders className="w-3.5 h-3.5" />
-            <span>2. Social Platform & Quality</span>
+            <span>2. Feed Layout & Quality</span>
           </button>
           <button
             onClick={() => setStep(3)}
@@ -230,12 +230,12 @@ export const FirstTimePostPreferenceModal: React.FC<Props> = ({
             <div>
               <label className="block text-xs font-mono uppercase font-bold text-slate-300 mb-1.5 flex items-center gap-2">
                 <MessageSquare className="w-4 h-4 text-amber-400" />
-                <span>Describe your post style:</span>
+                <span>Primary Content Focus & Interests:</span>
               </label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe your post style and content interests..."
+                placeholder="Describe your primary topics and content interests (e.g. cinema, tech innovations, art)..."
                 rows={2.5}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400 transition font-sans shadow-inner"
               />
@@ -289,7 +289,7 @@ export const FirstTimePostPreferenceModal: React.FC<Props> = ({
             {/* Social Platform Selection */}
             <div>
               <label className="block text-xs font-mono uppercase font-bold text-slate-300 mb-2">
-                Social Platform Style Preference:
+                Feed Layout & Presentation Style:
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {PLATFORM_STYLES.map((ps) => (

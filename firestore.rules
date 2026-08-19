@@ -171,5 +171,19 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+
+    // --- PAID AD REMOVAL PAYMENTS ---
+    // User can only view their own payment submissions.
+    // User can only create with status == 'pending' and adsRemoved == false.
+    // Only admins can view all receipts, approve (verify) or reject payments, and modify adsRemoved.
+    match /ad_removal_payments/{paymentId} {
+      allow read: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow list: if (isSignedIn() && request.query.limit <= 50) || isAdmin();
+      allow create: if isSignedIn() && 
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.adsRemoved == false;
+      allow update, delete: if isAdmin();
+    }
   }
 }
